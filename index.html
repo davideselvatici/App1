@@ -1,0 +1,1361 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dove Spendo</title>
+<meta name="description" content="Le spese del mese per categoria, dall'estratto conto di bunq o Revolut. I dati restano sul telefono.">
+<meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1117" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dove Spendo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+@font-face { font-family: "Bricolage Grotesque"; src: url(bricolage-grotesque.woff2) format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url(plex-sans-400.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url(plex-sans-500.woff2) format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url(plex-sans-600.woff2) format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url(plex-mono-400.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url(plex-mono-500.woff2) format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+html { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+
+/* Layout: una pagina di quaderno a quadretti, in colonna singola.
+   In alto il totale del mese, sotto le categorie come righe con una sottile barra d'inchiostro blu. */
+:root {
+  --paper: #f2f4f7;
+  --grid: #e3e8ef;
+  --card: #ffffff;
+  --sunk: #f6f8fb;
+  --hover: #eef2f8;
+  --chip: #edf0f5;
+  --ink: #16213b;
+  --ink-2: #4a5468;
+  --muted: #667085;
+  --rule: #e4e8ef;
+  --baseline: #c9d0da;
+  --accent: #2446c8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2e8fa;
+  --bar-rest: #c4cbd7;
+  --warn: #7f5300;
+  --warn-soft: #fbf0d8;
+  --warn-bar: #d9990f;
+  --good: #19723a;
+  --bad: #b42318;
+  --backdrop: rgba(12, 18, 30, .45);
+  --shadow: 0 1px 2px rgba(22, 33, 59, .06), 0 6px 20px rgba(22, 33, 59, .07);
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1117;
+    --grid: #171c24;
+    --card: #161b23;
+    --sunk: #121720;
+    --hover: #1c2330;
+    --chip: #222a38;
+    --ink: #e7ebf2;
+    --ink-2: #aab3c2;
+    --muted: #8c95a5;
+    --rule: #252c38;
+    --baseline: #3a4352;
+    --accent: #8098ff;
+    --accent-ink: #0b1020;
+    --accent-soft: #1f2842;
+    --bar-rest: #3a4354;
+    --warn: #f2bd5c;
+    --warn-soft: #2d2414;
+    --warn-bar: #e0a33a;
+    --good: #4cc27a;
+    --bad: #ff8a80;
+    --backdrop: rgba(0, 0, 0, .6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1117;
+  --grid: #171c24;
+  --card: #161b23;
+  --sunk: #121720;
+  --hover: #1c2330;
+  --chip: #222a38;
+  --ink: #e7ebf2;
+  --ink-2: #aab3c2;
+  --muted: #8c95a5;
+  --rule: #252c38;
+  --baseline: #3a4352;
+  --accent: #8098ff;
+  --accent-ink: #0b1020;
+  --accent-soft: #1f2842;
+  --bar-rest: #3a4354;
+  --warn: #f2bd5c;
+  --warn-soft: #2d2414;
+  --warn-bar: #e0a33a;
+  --good: #4cc27a;
+  --bad: #ff8a80;
+  --backdrop: rgba(0, 0, 0, .6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+body.lock { overflow: hidden; }
+button, input, select { font: inherit; color: inherit; }
+:where(button, select, summary, input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; }
+svg { display: block; }
+
+.page { max-width: 600px; margin-inline: auto; padding-inline: 16px; padding-block: 18px 96px; display: flex; flex-direction: column; gap: 18px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { margin: 0; font-family: var(--font-display); font-size: clamp(22px, 6.4vw, 27px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; }
+.topbar .btn { padding: 0 14px; }
+.content { display: flex; flex-direction: column; gap: 18px; }
+
+.btn { appearance: none; border: 0; border-radius: 999px; font-weight: 600; font-size: 14px; line-height: 1; padding: 0 16px; min-height: 42px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { filter: brightness(1.07); }
+.btn-quiet { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.linkish { border: 0; background: transparent; padding: 8px 0; cursor: pointer; color: var(--accent); font-weight: 600; text-align: left; }
+.linkish.danger { color: var(--bad); }
+
+/* esempio */
+.sample { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.sample p { margin: 0; }
+.tag-sample { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 9px; }
+
+/* mese */
+.monthbar { display: flex; flex-direction: column; gap: 4px; }
+.monthnav { display: flex; align-items: center; gap: 8px; }
+.month-pick { position: relative; flex: 1; min-width: 0; }
+.month-pick select { appearance: none; -webkit-appearance: none; width: 100%; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: -0.015em; padding: 4px 30px 4px 2px; cursor: pointer; text-overflow: ellipsis; }
+.month-pick select option { font-family: var(--font-body); font-size: 16px; }
+.month-pick svg { position: absolute; right: 6px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); pointer-events: none; color: var(--ink-2); }
+.round { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 0; background: var(--card); box-shadow: inset 0 0 0 1px var(--rule); display: grid; place-items: center; cursor: pointer; color: var(--ink); }
+.round svg { width: 18px; height: 18px; }
+.round:disabled { opacity: .35; cursor: default; }
+.accounts { margin: 0; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 12px; }
+
+/* totale */
+.hero { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.hero-value { margin: 0; font-weight: 600; font-size: clamp(42px, 13vw, 60px); line-height: 1; letter-spacing: -0.03em; }
+.hero-sub { margin: 0; color: var(--ink-2); text-wrap: pretty; }
+.delta { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.delta svg { width: 16px; height: 16px; flex: none; }
+.delta.more { color: var(--bad); }
+.delta.less { color: var(--good); }
+.delta.same { color: var(--ink-2); }
+.facts { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: var(--ink-2); }
+.facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* da classificare */
+.attn { background: var(--warn-soft); border-radius: var(--radius); overflow: hidden; }
+.attn-head { width: 100%; border: 0; background: transparent; color: var(--warn); display: flex; align-items: center; gap: 12px; padding: 14px 16px; text-align: left; cursor: pointer; font-weight: 600; }
+.attn-head > svg { width: 20px; height: 20px; flex: none; }
+.attn-head .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.attn-head small { font-size: 13px; font-weight: 500; }
+.attn-head .chev { transition: transform .15s; }
+.attn-head[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.attn .txlist { background: var(--card); border-top: 0; }
+
+/* schede */
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px 4px; }
+.card-title { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+.card-note { font-size: 12px; color: var(--muted); }
+.rows { list-style: none; margin: 0; padding: 0 0 6px; }
+.row + .row { border-top: 1px solid var(--rule); }
+.row-btn { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 7px; align-items: baseline; }
+.row-btn:hover { background: var(--hover); }
+.row-name { font-weight: 600; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.row-name svg { width: 16px; height: 16px; flex: none; color: var(--muted); transition: transform .15s; }
+.row-btn[aria-expanded="true"] .row-name svg { transform: rotate(90deg); }
+.row-amt { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.track { grid-column: 1 / -1; height: 8px; background: var(--accent-soft); border-radius: 0 4px 4px 0; }
+.fill { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+.row-meta { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.row.warn .row-name, .row.warn .row-name svg { color: var(--warn); }
+.row.warn .track { background: var(--warn-soft); }
+.row.warn .fill { background: var(--warn-bar); }
+.row.zero .row-amt { color: var(--muted); font-weight: 500; }
+.empty { padding: 12px 16px 16px; color: var(--muted); }
+
+/* movimenti */
+.txlist { list-style: none; margin: 0; padding: 4px 0; background: var(--sunk); border-top: 1px solid var(--rule); }
+.tx-btn { width: 100%; border: 0; background: transparent; cursor: pointer; text-align: left; padding: 9px 16px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 1px; align-items: baseline; }
+.tx-btn:hover { background: var(--hover); }
+.tx-date { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx-name { font-weight: 500; overflow-wrap: anywhere; }
+.tx-amt { font-variant-numeric: tabular-nums; font-weight: 500; text-align: right; white-space: nowrap; }
+.tx-amt.in { color: var(--good); }
+.tx-sub { grid-column: 2 / -1; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; background: var(--chip); color: var(--ink-2); vertical-align: 1px; white-space: nowrap; }
+
+/* mese per mese */
+.trend { display: flex; align-items: flex-end; gap: 4px; padding: 30px 12px 10px; overflow-x: auto; }
+.col { flex: 1 0 36px; border: 0; background: transparent; cursor: pointer; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.col-plot { position: relative; width: 100%; height: 100px; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--baseline); }
+.col-bar { display: block; width: 22px; max-width: 70%; background: var(--bar-rest); border-radius: 4px 4px 0 0; }
+.col:hover .col-bar { filter: brightness(1.08); }
+.col[aria-pressed="true"] .col-bar { background: var(--accent); }
+.col-val { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11.5px; font-weight: 600; white-space: nowrap; color: var(--ink); font-variant-numeric: tabular-nums; }
+.col-lab { font-size: 12px; color: var(--muted); }
+.col[aria-pressed="true"] .col-lab { color: var(--ink); font-weight: 600; }
+.trend-note { margin: 0; padding: 0 16px 12px; font-size: 12px; color: var(--muted); }
+
+/* aiuto e dati */
+.help { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 0 16px; }
+.help summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.help summary::-webkit-details-marker { display: none; }
+.help summary svg { width: 18px; height: 18px; color: var(--muted); transition: transform .15s; }
+.help[open] summary svg { transform: rotate(90deg); }
+.help-body { padding: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.help-body p { margin: 0; }
+.fine { font-size: 13px; color: var(--muted); }
+.data { padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.data p { margin: 0; }
+.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.files li { display: flex; flex-direction: column; gap: 1px; font-size: 14px; }
+.files .mono { color: var(--muted); overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 0 22px; }
+.foot { margin: 0; font-size: 12.5px; color: var(--muted); text-align: center; text-wrap: balance; }
+
+/* avviso */
+.toast { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30; max-width: 568px; margin-inline: auto; padding: 12px 16px; border-radius: 14px; background: var(--ink); color: var(--paper); font-size: 14px; font-weight: 500; box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
+.toast.err { background: var(--bad); color: #ffffff; }
+
+/* scelta categoria */
+.backdrop { position: fixed; inset: 0; background: var(--backdrop); z-index: 20; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; margin-inline: auto; max-width: 600px; max-height: 88vh; max-height: 88dvh; overflow-y: auto; background: var(--card); color: var(--ink); border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, .2); padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; animation: sheet-up .18s ease-out; }
+.sheet[hidden] { display: none; }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+.grab { width: 40px; height: 4px; border-radius: 4px; background: var(--rule); align-self: center; }
+.sheet-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; }
+.sheet-kicker { grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: var(--muted); }
+.sheet h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.015em; overflow-wrap: anywhere; outline: none; }
+.sheet-amt { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sheet-amt.in { color: var(--good); }
+.sheet-desc { margin: 0; font-size: 13.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+.sheet-now { margin: 0; font-size: 14px; }
+.sheet-now span { color: var(--muted); }
+.remember { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 12px; background: var(--sunk); font-size: 14px; cursor: pointer; }
+.remember input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+.remember span { display: flex; flex-direction: column; gap: 2px; font-weight: 500; }
+.remember small { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.group-label { margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 0; border-radius: 999px; min-height: 40px; padding: 0 14px; background: var(--chip); color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip svg { width: 16px; height: 16px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.newcat { display: flex; gap: 8px; }
+.newcat input { flex: 1; min-width: 0; border: 0; border-radius: 999px; padding: 0 14px; min-height: 42px; background: var(--sunk); box-shadow: inset 0 0 0 1px var(--rule); color: var(--ink); font-size: 15px; }
+.sheet-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+  .row-name svg, .attn-head .chev, .help summary svg { transition: none; }
+}
+
+.page {
+  padding-top: calc(18px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.install { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.install p { margin: 0; }
+.install-title { font-weight: 600; }
+.install-row { display: flex; align-items: center; gap: 4px 18px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <h1 class="brand">Dove Spendo</h1>
+    <button class="btn btn-primary" type="button" id="upload" data-upload>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>
+      <span>Carica estratto</span>
+    </button>
+    <input class="sr-only" type="file" id="file" tabindex="-1" aria-hidden="true" accept=".csv,.tsv,.txt,.xls,.xlsx,.json,application/json,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple>
+  </header>
+  <main class="content" id="content"></main>
+  <p class="foot">Dove Spendo legge i file sul telefono e non li invia a nessun server. I dati restano solo su questo dispositivo, quindi ogni tanto esporta un backup.</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="backdrop" id="backdrop" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden></div>
+
+<script id="core">
+/* Logica pura: lettura del file, categorie, totali. Nessun accesso al DOM. */
+window.DSCore = (function () {
+  'use strict';
+
+  const CATS = [
+    { id: 'ristoranti', label: 'Bar e ristoranti' },
+    { id: 'spesa', label: 'Spesa' },
+    { id: 'affitto', label: 'Affitto' },
+    { id: 'viaggi', label: 'Viaggi' },
+    { id: 'trasporti', label: 'Trasporti' },
+    { id: 'casa', label: 'Casa e bollette' },
+    { id: 'shopping', label: 'Shopping' },
+    { id: 'abbonamenti', label: 'Abbonamenti' },
+    { id: 'salute', label: 'Salute' },
+    { id: 'svago', label: 'Svago e sport' },
+    { id: 'regali', label: 'Regali' },
+    { id: 'contanti', label: 'Contanti' },
+    { id: 'altro', label: 'Altro' }
+  ];
+
+  /* Regole automatiche: la prima che corrisponde vince. dir 'in' = solo entrate, 'out' = solo uscite. */
+  const RULES = [
+    ['entrate', /\b(SALARIS|SALARY|STIPENDIO|SALARIO|LOON|PAYROLL|UWV|DUO|PENSIOEN|ZORGTOESLAG|HUURTOESLAG|TOESLAG|RENTE|INTERESSI|INTEREST)\b/, 'in'],
+    ['abbonamenti', /\bBUNQ\b.*\b(FATTURA|INVOICE|FACTUUR)\b/, 'out'],
+    ['abbonamenti', /SPOTIFY|NETFLIX|DISNEY|HBO ?MAX|VIDEOLAND|PRIME ?VIDEO|AMAZON PRIME|AMZN PRIME|APPLE\.COM|APPLE COM|ITUNES|ICLOUD|GOOGLE ?(PLAY|ONE|STORAGE)|YOUTUBE|DAZN|NOW ?TV|OPENAI|CHATGPT|ANTHROPIC|MICROSOFT|ADOBE|DROPBOX|PATREON|DUOLINGO|AUDIBLE|STORYTEL/],
+    ['ristoranti', /UBER ?EATS|DELIVEROO|THUISBEZORGD|JUST ?EAT|GLOVO|TAKEAWAY\.COM/],
+    ['ristoranti', /BEDRIJFSREST|STARBUCKS|MC ?DONALD|BURGER KING|\bKFC\b|SUBWAY|DOMINO|NEW YORK PIZZA|FIVE GUYS|VAPIANO|WAGAMAMA|LA PLACE|HMS ?HOST|AUTOGRILL|BAGELS|COFFEE ?COMPANY|DUNKIN|PRET A MANGER/],
+    ['ristoranti', /\b(RESTAURANT|RESTAURANTE|RISTORANTE|TRATTORIA|OSTERIA|PIZZERIA|PIZZA|BISTRO|BRASSERIE|TAVERNA|TAPAS|SUSHI|RAMEN|POKE|WOK|KEBAB|SHOARMA|SHAWARMA|DONER|GRILL|BURGERS?|SNACKBAR|SNACK|FRITUUR|FRIETEN|FRIET|FEBO|PUB|BAR|BARS|TAPROOM|BROUWERIJ|PROEFLOKAAL|KANTINE|MENSA|GELATERIA|GELATO|IJSSALON|PASTICCERIA|LUNCHROOM|DINER|EETCAFE|BIERENCAFE|CAFE|CAFFE|CAFETARIA|CAFETERIA|COFFEE|KOFFIE|ESPRESSO|BAKERY)\b/],
+    ['ristoranti', /\b(CIBO|CENA|CENE|PRANZO|PRANZI|APERITIVO|APERICENA|DINNER|LUNCH|DRINKS?|BIRRA|BIRRE|BIER|ETEN|BORREL)\b/],
+    ['spesa', /ALBERT HEIJN|\bAH\b|JUMBO|LIDL|\bALDI\b|^PLUS\b|PLUS SUPERMARKT|\bDIRK\b|DEKAMARKT|HOOGVLIET|SPAR\b|\bCOOP\b|VOMAR|EKOPLAZA|JAN LINDERS|POIESZ|NETTORAMA|PICNIC|\bFLINK\b|GETIR|\bCRISP\b|\bTOKO\b|SUPERMARK|SUPERMERCAT|ESSELUNGA|CONAD|CARREFOUR|\bIPER|PENNY|EUROSPIN|TIGROS|BENNET|\bUNES\b|FAMILA|\bCRAI\b|NATURASI|\bPAM\b|\bMD\b|BAKKER|SLAGER|GROENTE|VISHANDEL|KAASHANDEL|PANIFICIO|MACELLERIA|SALUMERIA|ORTOFRUTTA|\bSPESA\b|BOODSCHAPPEN|GROCER/],
+    ['viaggi', /EDREAMS|BOOKING\.COM|BOOKING COM|AIRBNB|RYANAIR|EASYJET|TRANSAVIA|\bKLM\b|ITA AIRWAYS|LUFTHANSA|VUELING|WIZZ ?AIR|EUROWINGS|SKYSCANNER|OPODO|LASTMINUTE|EXPEDIA|AGODA|HOTEL|HOSTEL|FLIXBUS|TRENITALIA|\bITALO\b|NS INTERNATIONAL|EUROSTAR|\bOMIO\b|TRAINLINE|BLABLACAR|\bSIXT\b|HERTZ|EUROPCAR|\bAVIS\b|MALPENSA|\b(VOLO|VOLI|FLIGHTS?|VIAGGIO|VACANZA|VAKANTIE|TRIP)\b/],
+    ['trasporti', /\bNS\b|OV-?CHIPKAART|OV CHIPKAART|OVPAY|ARRIVA|KEOLIS|SYNTUS|TWENTS|CONNEXXION|QBUZZ|\bGVB\b|\bRET\b|\bHTM\b|SWAPFIETS|OV-FIETS|\bUBER\b|\bBOLT\b|TAXI|TRENORD|ATM MILAN|TICKET ATM|\bATAC\b|\bGTT\b|\bTPER\b|\bSHELL\b|\bESSO\b|\bBP\b|TOTALENERGIES|\bTANGO\b|\bTINQ\b|\bQ8\b|\bENI\b|PARKEREN|PARKING|PARCHEGGIO|Q-PARK|YELLOWBRICK|EASYPARK|PARKMOBILE|TELEPASS|AUTOSTRAD/],
+    ['contanti', /GELDAUTOMAAT|GELDOPNAME|PRELIEVO|BANCOMAT|CASH WITHDRAWAL/],
+    ['casa', /VITENS|WATERBEDRIJF|EVIDES|BRABANT WATER|WATERNET|\bENECO\b|VATTENFALL|ESSENT|GREENCHOICE|BUDGET ENERGIE|ENERGIEDIRECT|FRANK ENERGIE|TIBBER|ZIGGO|\bKPN\b|ODIDO|T-MOBILE|VODAFONE|SIMYO|LEBARA|LYCAMOBILE|YOUFONE|GEMEENTE|BELASTING|WATERSCHAP|\bIKEA\b|\bGAMMA\b|PRAXIS|KARWEI|HORNBACH|\bENEL\b|\bA2A\b|\bHERA\b|\bIREN\b|EDISON|FASTWEB|WINDTRE|ILIAD|\b(BOLLETTA|BOLLETTE|UTENZE)\b/],
+    ['salute', /APOTHEEK|FARMACIA|PHARMACY|KRUIDVAT|\bETOS\b|DROGIST|TREKPLEISTER|HOLLAND & BARRETT|TANDARTS|HUISARTS|FYSIO|OPTICIEN|SPECSAVERS|PEARLE|ZIEKENHUIS|ZILVEREN KRUIS|MENZIS|\bVGZ\b|\bDSW\b|\bONVZ\b|ZORGVERZEKER|OSPEDALE|DENTISTA/],
+    ['svago', /CINEMA|PATHE|\bVUE\b|KINEPOLIS|BIOSCOOP|THEATER|TEATRO|MUSEUM|MUSEO|TICKETMASTER|EVENTIM|TICKETSWAP|BASIC-?FIT|SPORTCITY|FITNESS|PALESTRA|\bGYM\b|ZWEMBAD|\bSTEAM\b|PLAYSTATION|NINTENDO|XBOX|BOWLING|CONCERT|FESTIVAL/],
+    ['shopping', /AMAZON|AMZN|BOL\.COM|\bBOL COM\b|ZALANDO|COOLBLUE|MEDIA ?MARKT|\bHEMA\b|\bACTION\b|PRIMARK|\bH ?& ?M\b|\bZARA\b|UNIQLO|DECATHLON|SHEIN|\bTEMU\b|ALIEXPRESS|WEHKAMP|\bETSY\b|VINTED|MARKTPLAATS|\bEBAY\b|PAYPAL/],
+    ['regali', /GIFT|REGALO|REGALI|CADEAU/],
+    ['affitto', /\b(AFFITTO|HUUR|KAMERHUUR|RENT)\b/]
+  ].map(([c, re, dir]) => ({ c, re, dir }));
+
+  const COLS = {
+    date: ['date', 'datum', 'data', 'booking date', 'transaction date', 'data operazione', 'data contabile'],
+    amount: ['amount', 'bedrag', 'importo', 'amount (eur)', 'bedrag (eur)', 'importo (eur)'],
+    account: ['account', 'rekening', 'conto'],
+    counterparty: ['counterparty', 'tegenrekening', 'controparte', 'counterparty iban'],
+    name: ['name', 'naam', 'nome', 'counterparty name', 'beneficiario'],
+    description: ['description', 'omschrijving', 'descrizione', 'causale', 'mededelingen', 'details'],
+    started: ['started date', 'data di inizio', 'data inizio', 'startdatum', 'date started'],
+    completed: ['completed date', 'data di completamento', 'data completamento', 'datum voltooid', 'date completed'],
+    fee: ['fee', 'commissione', 'commissioni', 'kosten'],
+    currency: ['currency', 'valuta', 'munteenheid'],
+    state: ['state', 'stato', 'status'],
+    type: ['type', 'tipo', 'soort'],
+    product: ['product', 'prodotto']
+  };
+
+  const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/;
+  const UPPER = new Set(['ATM', 'NS', 'AH', 'KFC', 'KLM', 'BV', 'B.V.', 'NV', 'N.V.', 'EU', 'SPA', 'SRL', 'UK', 'IT', 'NL', 'DE', 'ES', 'FR', 'BE', 'TVM']);
+  const ALIASES = [[/^PAYPAL\b/, 'PayPal'], [/^(AMAZON|AMZN)\b/, 'Amazon'], [/^BUNQ\b/, 'bunq']];
+  const CASHBACK_RE = /hai vinto|you won|you've won|gewonnen|cashback/i;
+  const CASHBACK_AT = /(?:speso da|spent at|uitgegeven bij|ausgegeben bei|dépensé chez)\s+(.+?)(?:,|\s+semplicemente|\s+simply|\s+gewoon|!|$)/i;
+
+  function normText(s) {
+    return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()
+      .replace(/['’‘`´]/g, '')
+      .replace(/[^A-Z0-9&.+@\-]+/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  function titleCase(s, keepShort) {
+    return String(s).toLowerCase().split(/(\s+)/).map(tok => {
+      if (!tok || /^\s+$/.test(tok)) return tok;
+      const bare = tok.replace(/[^\p{L}.]/gu, '').toUpperCase();
+      if (UPPER.has(bare) || (keepShort && bare.length > 0 && bare.length <= 2)) return tok.toUpperCase();
+      return tok.replace(/(^|[\-/(&.'])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+    }).join('');
+  }
+
+  function pretty(s, keepShort) {
+    s = String(s || '').replace(/\s{2,}/g, ' ').trim();
+    return /\p{Ll}/u.test(s) ? s : titleCase(s, keepShort);
+  }
+
+  function cleanName(raw) {
+    const orig = String(raw || '').trim();
+    let s = orig.replace(/^(BCK|CCV|SUMUP|SUM UP|SQ|ZETTLE|IZ|PAY\.NL|MOLLIE|ADYEN|STRIPE|PP|TWINT)\s*[*_]\s*/i, '');
+    s = s.replace(/^[A-Z0-9]{2,5}\*\s*/, '');
+    s = s.replace(/[\s.#]*\d{3,}$/, '');
+    s = s.replace(/\s{2,}/g, ' ').trim();
+    return pretty(s || orig);
+  }
+
+  function displayName(t) {
+    const raw = t.raw || t.desc || '';
+    const n = normText(raw);
+    for (const [re, name] of ALIASES) if (re.test(n)) return name;
+    return cleanName(raw) || 'Movimento';
+  }
+
+  function maskIban(v) {
+    const s = String(v || '').replace(/\s/g, '');
+    return s.length > 8 ? s.slice(0, 4) + ' •••• ' + s.slice(-4) : s;
+  }
+
+  function cleanIban(v) {
+    const s = String(v == null ? '' : v).replace(/\s/g, '').toUpperCase();
+    return IBAN_RE.test(s) ? s : '';
+  }
+
+  function keyFor(t) {
+    if (t.cp) return 'I:' + t.cp;
+    const n = normText(cleanName(t.raw || t.desc));
+    return n ? 'M:' + n : '';
+  }
+
+  function fnv(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(36);
+  }
+
+  function parseCSV(text) {
+    text = String(text || '').replace(/^﻿/, '');
+    let firstLine = '', inQ = false;
+    for (const ch of text) { if (ch === '"') inQ = !inQ; if (!inQ && (ch === '\n' || ch === '\r')) break; firstLine += ch; }
+    const counts = { ';': 0, ',': 0, '\t': 0 };
+    inQ = false;
+    for (const ch of firstLine) { if (ch === '"') inQ = !inQ; else if (!inQ && ch in counts) counts[ch]++; }
+    let delim = ',', best = 0;
+    for (const d of [';', '\t', ',']) if (counts[d] > best) { best = counts[d]; delim = d; }
+    const rows = []; let row = []; let field = ''; let q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else field += c;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(x => String(x).trim() !== ''));
+  }
+
+  function parseAmount(v) {
+    if (typeof v === 'number') return v;
+    let s = String(v == null ? '' : v).trim().replace(/\s| /g, '').replace(/€|EUR/gi, '').replace(/−/g, '-');
+    if (!s) return NaN;
+    let neg = false;
+    if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+    if (/-$/.test(s)) { neg = true; s = s.slice(0, -1); }
+    if (/^\+/.test(s)) s = s.slice(1);
+    const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+    if (lc > -1 && ld > -1) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else if (lc > -1) s = ((s.match(/,/g) || []).length === 1 && s.length - lc - 1 <= 2) ? s.replace(',', '.') : s.replace(/,/g, '');
+    else if (ld > -1 && ((s.match(/\./g) || []).length > 1 || s.length - ld - 1 === 3)) s = s.replace(/\./g, '');
+    if (!/^-?\d+(\.\d+)?$/.test(s)) return NaN;
+    const n = Number(s);
+    return neg ? -Math.abs(n) : n;
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function validYmd(y, m, d) {
+    y = +y; m = +m; d = +d;
+    if (!(y > 1990 && y < 2200 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return '';
+    return y + '-' + pad(m) + '-' + pad(d);
+  }
+  function parseDate(v) {
+    if (v instanceof Date && !isNaN(v)) return validYmd(v.getFullYear(), v.getMonth() + 1, v.getDate());
+    if (typeof v === 'number' && v > 20000 && v < 80000) {
+      const d = new Date(Math.round((v - 25569) * 86400000));
+      return validYmd(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+    }
+    const s = String(v == null ? '' : v).trim();
+    let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    if (m) return validYmd(m[1], m[2], m[3]);
+    m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+    if (m) return +m[2] > 12 && +m[1] <= 12 ? validYmd(m[3], m[1], m[2]) : validYmd(m[3], m[2], m[1]);
+    m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (m) return validYmd(m[1], m[2], m[3]);
+    return '';
+  }
+
+  function normHeader(h) { return String(h == null ? '' : h).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' '); }
+  function findCol(header, names) { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; }
+
+  function rowsToTx(rows, fileName) {
+    rows = (rows || []).filter(r => Array.isArray(r) && r.some(x => String(x == null ? '' : x).trim() !== ''));
+    let hi = -1, H = null;
+    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+      const h = rows[i].map(normHeader);
+      const hasAmt = findCol(h, COLS.amount) !== -1;
+      const hasDate = [COLS.date, COLS.started, COLS.completed].some(n => findCol(h, n) !== -1);
+      if (hasAmt && hasDate) { hi = i; H = h; break; }
+    }
+    if (hi === -1) {
+      const seenCols = (rows[0] || []).map(x => String(x == null ? '' : x).trim()).filter(Boolean).slice(0, 10).join(', ');
+      throw new Error('Non trovo le colonne con data e importo.' + (seenCols ? ' Colonne trovate: ' + seenCols + '.' : ''));
+    }
+    const col = k => findCol(H, COLS[k]);
+    const iStart = col('started'), iDone = col('completed');
+    const revolut = iStart !== -1 || iDone !== -1;
+    const ix = { date: col('date'), amount: col('amount'), account: col('account'), cp: col('counterparty'), name: col('name'), desc: col('description'), fee: col('fee'), cur: col('currency'), state: col('state'), type: col('type'), product: col('product') };
+    const bunqHeader = H.includes('interest date') || H.includes('rentedatum');
+    const get = (r, i) => (i === -1 || r[i] == null) ? '' : r[i];
+    const out = [], seen = new Map();
+    let skipped = 0;
+    for (let r = hi + 1; r < rows.length; r++) {
+      const row = rows[r];
+      let date, cents, raw, desc, cp = '', account, cur = 'EUR', kind, src;
+      if (revolut) {
+        if (/REVERT|DECLIN|FAIL|CANCEL|ANNULL|RIFIUT|STORN|MISLUKT|GEWEIGERD/i.test(String(get(row, ix.state)))) continue;
+        date = parseDate(get(row, iStart !== -1 ? iStart : iDone)) || parseDate(get(row, iDone));
+        const amt = parseAmount(get(row, ix.amount));
+        const fee = parseAmount(get(row, ix.fee));
+        cents = Number.isFinite(amt) ? Math.round((amt - (Number.isFinite(fee) ? Math.abs(fee) : 0)) * 100) : NaN;
+        desc = String(get(row, ix.desc)).trim();
+        raw = desc;
+        cur = String(get(row, ix.cur)).trim().toUpperCase() || 'EUR';
+        const type = String(get(row, ix.type)).toUpperCase();
+        const product = String(get(row, ix.product)).trim();
+        if (/TOP.?UP|EXCHANGE|RICARICA|CAMBIO/.test(type) || /^(to|from|verso|da|naar|van)\b.*(pocket|vault|savings|salvadanaio|risparmi|spaar)/i.test(desc) || /savings|risparmi|deposit|spaar/i.test(product)) kind = 'internal';
+        else if (/^FEE$|COMMISSION/.test(type)) kind = 'fee';
+        else if (/CASHBACK|REWARD|INTEREST|INTERESSI|RENTE/.test(type)) kind = 'reward';
+        else if (/ATM|PRELIEVO/.test(type)) kind = 'atm';
+        else if (/TRANSFER|TRASFERIMENTO|BONIFICO|OVERSCHRIJVING/.test(type)) kind = 'transfer';
+        else kind = 'card';
+        account = 'Revolut' + (product ? ' ' + product : '') + ' ' + cur;
+        src = 'revolut';
+      } else {
+        date = parseDate(get(row, ix.date));
+        const amt = parseAmount(get(row, ix.amount));
+        cents = Number.isFinite(amt) ? Math.round(amt * 100) : NaN;
+        raw = String(get(row, ix.name)).trim();
+        desc = String(get(row, ix.desc)).trim();
+        if (!raw) raw = desc;
+        cp = cleanIban(get(row, ix.cp));
+        account = cleanIban(get(row, ix.account)) || String(get(row, ix.account)).trim();
+        kind = cp ? 'transfer' : 'card';
+        src = bunqHeader || /BUNQ/.test(account) ? 'bunq' : 'csv';
+      }
+      if (!date || !Number.isFinite(cents)) { skipped++; continue; }
+      if (cents === 0) continue;
+      const base = [src, account, date, cents, cp, raw, desc].join('|');
+      const n = (seen.get(base) || 0) + 1;
+      seen.set(base, n);
+      const t = { id: src + '-' + fnv(base) + '-' + n, src, date, cents, cur, account, cp, raw, desc, kind };
+      t.key = keyFor(t);
+      out.push(t);
+    }
+    const m = String(fileName || '').match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/);
+    const dates = out.map(t => t.date).sort();
+    const file = { name: String(fileName || 'file'), from: m ? m[1] : (dates[0] || ''), to: m ? m[2] : (dates[dates.length - 1] || ''), count: out.length, src: out[0] ? out[0].src : '' };
+    return { txs: out, file, skipped };
+  }
+
+  function merge(store, parsed) {
+    const have = new Set(store.tx.map(t => t.id));
+    let added = 0;
+    for (const t of parsed.txs) if (!have.has(t.id)) { have.add(t.id); store.tx.push(t); added++; }
+    const f = parsed.file;
+    if (!store.files.some(x => x.name === f.name && x.from === f.from && x.to === f.to)) store.files.push(f);
+    store.tx.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    return added;
+  }
+
+  function ownIbans(txs) {
+    const s = new Set();
+    for (const t of txs) if (IBAN_RE.test(t.account || '')) s.add(t.account);
+    return s;
+  }
+
+  function cashbackMerchant(t) {
+    if (!(t.cents > 0) || !/^BUNQ\b/.test(normText(t.raw)) || !CASHBACK_RE.test(t.desc || '')) return null;
+    const m = String(t.desc).match(CASHBACK_AT);
+    return m ? m[1].trim() : '';
+  }
+
+  function matchRules(text, cents) {
+    for (const r of RULES) {
+      if (r.dir === 'in' && !(cents > 0)) continue;
+      if (r.dir === 'out' && !(cents < 0)) continue;
+      if (r.re.test(text)) return r.c;
+    }
+    return '';
+  }
+
+  const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+
+  function categorize(t, ctx) {
+    if (has(ctx.overrides, t.id)) return { cat: ctx.overrides[t.id], how: 'manual' };
+    if (t.key && has(ctx.rules, t.key)) return { cat: ctx.rules[t.key], how: 'rule' };
+    if (t.cp && ctx.own && ctx.own.has(t.cp)) return { cat: 'giroconto', how: 'auto' };
+    if (t.kind === 'internal') return { cat: 'giroconto', how: 'auto' };
+    const cb = cashbackMerchant(t);
+    if (cb !== null) {
+      const c = cb ? matchRules(normText(cb), -1) : '';
+      return { cat: c || 'entrate', how: 'auto', note: 'cashback' };
+    }
+    if (t.kind === 'fee') return { cat: 'abbonamenti', how: 'auto' };
+    if (t.kind === 'reward') return { cat: 'entrate', how: 'auto' };
+    if (t.kind === 'atm') return { cat: 'contanti', how: 'auto' };
+    const c = matchRules(normText(t.raw + ' ' + t.desc), t.cents);
+    return { cat: c, how: c ? 'auto' : 'none' };
+  }
+
+  function daysIn(month) { return new Date(+month.slice(0, 4), +month.slice(5, 7), 0).getDate(); }
+  function prevMonth(month) {
+    let y = +month.slice(0, 4), m = +month.slice(5, 7) - 1;
+    if (m < 1) { m = 12; y--; }
+    return y + '-' + pad(m);
+  }
+  function monthsOf(txs) {
+    return [...new Set(txs.filter(t => !t.cur || t.cur === 'EUR').map(t => t.date.slice(0, 7)))].sort();
+  }
+
+  function coverage(month, files) {
+    const start = month + '-01', end = month + '-' + pad(daysIn(month));
+    let from = '', to = '';
+    for (const f of files || []) {
+      if (!f.from || !f.to || f.to < start || f.from > end) continue;
+      const a = f.from > start ? f.from : start, b = f.to < end ? f.to : end;
+      if (!from || a < from) from = a;
+      if (!to || b > to) to = b;
+    }
+    return { start, end, from, to, partial: !!from && (from > start || to < end) };
+  }
+
+  function summarize(txs, ctx, month, dFrom, dTo) {
+    const cats = new Map();
+    const r = { total: 0, unOut: 0, unTx: [], income: 0, incomeTx: [], internalOut: 0, internalIn: 0, internalTx: [], back: 0, otherCur: 0, rows: [] };
+    for (const t of txs) {
+      if (t.date.slice(0, 7) !== month) continue;
+      if (dFrom) { const d = +t.date.slice(8, 10); if (d < dFrom || d > dTo) continue; }
+      if (t.cur && t.cur !== 'EUR') { r.otherCur++; continue; }
+      const c = categorize(t, ctx);
+      const w = { t, cat: c.cat, how: c.how, note: c.note };
+      if (c.cat === 'giroconto') { r.internalTx.push(w); if (t.cents < 0) r.internalOut -= t.cents; else r.internalIn += t.cents; }
+      else if (c.cat === 'entrate') { r.incomeTx.push(w); r.income += t.cents; }
+      else if (!c.cat) { r.unTx.push(w); if (t.cents < 0) r.unOut -= t.cents; }
+      else {
+        let g = cats.get(c.cat);
+        if (!g) cats.set(c.cat, g = { id: c.cat, out: 0, back: 0, spent: 0, txs: [] });
+        if (t.cents < 0) g.out -= t.cents; else g.back += t.cents;
+        g.txs.push(w);
+      }
+    }
+    for (const g of cats.values()) { g.spent = Math.max(0, g.out - g.back); r.back += Math.min(g.out, g.back); r.rows.push(g); }
+    r.rows.sort((a, b) => b.spent - a.spent || b.back - a.back);
+    r.total = r.rows.reduce((s, g) => s + g.spent, 0) + r.unOut;
+    return r;
+  }
+
+  /* Confronto col mese prima. Se il mese è parziale, confronta gli stessi giorni. */
+  function delta(txs, ctx, month, files) {
+    const prev = prevMonth(month);
+    if (!txs.some(t => t.date.startsWith(prev))) return null;
+    const cov = coverage(month, files), pcov = coverage(prev, files);
+    if (!cov.from || !pcov.from) return null;
+    const pdays = daysIn(prev);
+    const d1 = cov.partial ? +cov.from.slice(8) : 1;
+    const d2 = cov.partial ? Math.min(+cov.to.slice(8), pdays) : pdays;
+    if (+pcov.from.slice(8) > d1 || +pcov.to.slice(8) < d2) return null;
+    const now = summarize(txs, ctx, month).total;
+    const before = cov.partial ? summarize(txs, ctx, prev, d1, d2).total : summarize(txs, ctx, prev).total;
+    if (!before) return null;
+    return { prev, ratio: (now - before) / before, partial: cov.partial, now, before };
+  }
+
+  function isCashback(t) { return cashbackMerchant(t) !== null; }
+
+  function subline(t) {
+    const cb = cashbackMerchant(t);
+    if (cb !== null) return cb ? 'cashback bunq su ' + pretty(cb) : 'cashback bunq';
+    if (t.src === 'revolut') return t.kind === 'transfer' ? 'bonifico' : '';
+    if (t.kind === 'card') {
+      const raw = String(t.raw || ''), desc = String(t.desc || '');
+      const rest = desc.toUpperCase().startsWith(raw.toUpperCase()) ? desc.slice(raw.length) : '';
+      return pretty(rest.replace(/^[\s,]+/, ''), true);
+    }
+    const parts = [];
+    if (t.desc && t.desc !== t.raw) parts.push(t.desc);
+    else parts.push(t.cents > 0 ? 'bonifico ricevuto' : 'bonifico');
+    if (t.cp) parts.push(maskIban(t.cp));
+    return parts.join(' · ');
+  }
+
+  function kindLabel(t) {
+    if (isCashback(t)) return 'cashback bunq';
+    return ({ card: 'pagamento con carta', transfer: t.cents > 0 ? 'bonifico ricevuto' : 'bonifico', internal: 'movimento interno', fee: 'commissione', reward: 'premio o interessi', atm: 'prelievo' })[t.kind] || 'movimento';
+  }
+
+  function accountLabel(t) {
+    if (t.src === 'bunq') return 'bunq ' + maskIban(t.account);
+    if (t.src === 'revolut') return t.account;
+    return IBAN_RE.test(t.account || '') ? maskIban(t.account) : (t.account || 'conto');
+  }
+
+  const EXAMPLE_CSV = [
+    '"Date";"Interest Date";"Amount";"Account";"Counterparty";"Name";"Description"',
+    '"2026-08-01";"2026-08-01";"-650,00";"NL00BUNQ0000000000";"NL00INGB0000000001";"Mario Rossi";"Affitto agosto"',
+    '"2026-08-02";"2026-08-02";"-43,20";"NL00BUNQ0000000000";"";"Albert Heijn 1001";"Albert Heijn 1001 ENSCHEDE, NL"',
+    '"2026-08-02";"2026-08-02";"0,43";"NL00BUNQ0000000000";"NL00BUNQ0000000002";"bunq";"Congratulazioni, hai vinto l’1% del tuo pagamento di 43,20 € speso da Albert Heijn, semplicemente usando la tua Carta bunq!"',
+    '"2026-08-03";"2026-08-03";"-12,40";"NL00BUNQ0000000000";"";"Cafe De Hoek";"Cafe De Hoek ENSCHEDE, NL"',
+    '"2026-08-05";"2026-08-05";"-24,00";"NL00BUNQ0000000000";"";"Pizzeria Napoli";"Pizzeria Napoli ENSCHEDE, NL"',
+    '"2026-08-06";"2026-08-06";"12,00";"NL00BUNQ0000000000";"NL00ABNA0000000003";"Giulia Bianchi";"Pizza"',
+    '"2026-08-08";"2026-08-08";"-18,75";"NL00BUNQ0000000000";"";"Jumbo Centrum";"Jumbo Centrum ENSCHEDE, NL"',
+    '"2026-08-10";"2026-08-10";"-89,99";"NL00BUNQ0000000000";"";"RYANAIR";"RYANAIR DUBLIN, IE"',
+    '"2026-08-12";"2026-08-12";"-7,80";"NL00BUNQ0000000000";"";"NS GROEP IZ NS REIZIGERS";"NS GROEP IZ NS REIZIGERS UTRECHT, NL"',
+    '"2026-08-14";"2026-08-14";"-11,99";"NL00BUNQ0000000000";"";"Spotify";"Spotify STOCKHOLM, SE"',
+    '"2026-08-15";"2026-08-15";"-23,49";"NL00BUNQ0000000000";"NL00CITI0000000004";"Amazon EU SARL";"D01-0000000-0000000"',
+    '"2026-08-18";"2026-08-18";"-31,60";"NL00BUNQ0000000000";"";"Jumbo Centrum";"Jumbo Centrum ENSCHEDE, NL"',
+    '"2026-08-20";"2026-08-20";"-38,50";"NL00BUNQ0000000000";"";"Ristorante Il Faro";"Ristorante Il Faro ENSCHEDE, NL"',
+    '"2026-08-22";"2026-08-22";"-45,00";"NL00BUNQ0000000000";"NL00INGB0000000005";"Vitens NV";"Acconto acqua"',
+    '"2026-08-24";"2026-08-24";"-9,50";"NL00BUNQ0000000000";"";"Negozio Sconosciuto";"Negozio Sconosciuto ENSCHEDE, NL"',
+    '"2026-08-25";"2026-08-25";"2150,00";"NL00BUNQ0000000000";"NL00RABO0000000006";"Azienda Esempio BV";"Stipendio agosto"'
+  ].join('\n');
+
+  return { CATS, parseCSV, parseAmount, parseDate, rowsToTx, merge, ownIbans, categorize, summarize, coverage, delta, monthsOf, daysIn, prevMonth, displayName, subline, kindLabel, accountLabel, maskIban, isCashback, normText, EXAMPLE_CSV };
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  const C = window.DSCore;
+  const KEY = 'dove-spendo:v1';
+  const XLSX_URL = 'xlsx.full.min.js';
+
+  const $ = s => document.querySelector(s);
+  const content = $('#content'), toastEl = $('#toast'), fileInput = $('#file'), sheet = $('#sheet'), backdrop = $('#backdrop');
+
+  const nf = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+  const nf0 = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, minimumFractionDigits: 0 });
+  const pctf = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });
+  const dShort = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
+  const dMonth = new Intl.DateTimeFormat('it-IT', { month: 'long' });
+  const dMonthYear = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' });
+  const dMonAbbr = new Intl.DateTimeFormat('it-IT', { month: 'short' });
+  const euro = c => nf.format(c / 100);
+  const euro0 = c => nf0.format(Math.round(c / 100));
+  const toDate = s => new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +(s.slice(8, 10) || 1));
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const monthLabel = m => cap(dMonthYear.format(toDate(m + '-01')));
+  const monthName = m => dMonth.format(toDate(m + '-01'));
+  const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+  const aMonth = m => (/^a/.test(monthName(m)) ? 'ad ' : 'a ') + monthName(m);
+
+  const ICON = {
+    left: '<path d="m15 18-6-6 6-6"/>',
+    right: '<path d="m9 18 6-6-6-6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    alert: '<path d="M12 3.5 2.5 20h19L12 3.5Z"/><path d="M12 10v4.5"/><path d="M12 17.5h.01"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    up: '<path d="M12 19V5"/><path d="m6 11 6-6 6 6"/>',
+    dn: '<path d="M12 5v14"/><path d="m18 13-6 6-6-6"/>',
+    same: '<path d="M5 12h14"/>'
+  };
+  function icon(name, cls) {
+    const t = document.createElement('template');
+    t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (cls ? ' class="' + cls + '"' : '') + '>' + ICON[name] + '</svg>';
+    return t.content.firstChild;
+  }
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    if (props) for (const k in props) {
+      const v = props[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const k of kids.flat(Infinity)) {
+      if (k == null || k === false) continue;
+      el.append(k instanceof Node ? k : document.createTextNode(String(k)));
+    }
+    return el;
+  }
+
+  /* ---------- dati ---------- */
+  const emptyStore = () => ({ v: 1, tx: [], files: [], rules: {}, overrides: {}, cats: [] });
+  let storageOk = true;
+  try { localStorage.setItem(KEY + ':t', '1'); localStorage.removeItem(KEY + ':t'); } catch (e) { storageOk = false; }
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && Array.isArray(s.tx)) return Object.assign(emptyStore(), s);
+      }
+    } catch (e) { /* dati illeggibili: si riparte da zero */ }
+    return emptyStore();
+  }
+  let store = load();
+  let demo = null;
+  const isDemo = () => store.tx.length === 0;
+  function active() {
+    if (!isDemo()) return store;
+    if (!demo) { demo = emptyStore(); C.merge(demo, C.rowsToTx(C.parseCSV(C.EXAMPLE_CSV), '2026-08-01_2026-08-31_esempio.csv')); }
+    return demo;
+  }
+  function save() {
+    if (isDemo()) return;
+    try { localStorage.setItem(KEY, JSON.stringify(store)); storageOk = true; } catch (e) { storageOk = false; }
+  }
+  const ctxOf = s => ({ rules: s.rules, overrides: s.overrides, own: C.ownIbans(s.tx) });
+  const allCats = s => C.CATS.concat(s.cats || []);
+  function catLabel(id, s) {
+    if (!id) return 'Da classificare';
+    if (id === 'entrate') return 'Entrate';
+    if (id === 'giroconto') return 'Giroconto';
+    const c = allCats(s).find(x => x.id === id);
+    return c ? c.label : id;
+  }
+
+  const ui = { month: null, open: new Set(), sheetTx: null, armed: null, armTimer: 0, focusId: null };
+
+  /* ---------- avvisi ---------- */
+  let toastTimer = 0;
+  function say(msg, err) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('err', !!err);
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, err ? 9000 : 5000);
+  }
+
+  /* ---------- pagina ---------- */
+  function render() {
+    const s = active();
+    const ctx = ctxOf(s);
+    const months = C.monthsOf(s.tx);
+    if (!months.includes(ui.month)) ui.month = months[months.length - 1] || null;
+    const nodes = [];
+    const inst = installCard();
+    if (inst) nodes.push(inst);
+    if (isDemo()) nodes.push(sampleBanner());
+    if (ui.month) {
+      const cov = C.coverage(ui.month, s.files);
+      const sum = C.summarize(s.tx, ctx, ui.month);
+      nodes.push(monthBar(months, s), hero(sum, cov, s, ctx));
+      if (sum.unTx.length) nodes.push(attention(sum, s));
+      nodes.push(categories(sum, s));
+      if (months.length > 1) nodes.push(trend(months, s, ctx));
+      if (sum.incomeTx.length || sum.internalTx.length) nodes.push(outside(sum, s));
+    }
+    nodes.push(help());
+    if (!isDemo()) nodes.push(dataCard(s));
+    content.replaceChildren(...nodes);
+    if (ui.focusId) {
+      const el = content.querySelector('[data-focus="' + ui.focusId + '"]');
+      if (el) el.focus({ preventScroll: true });
+      ui.focusId = null;
+    }
+  }
+
+  function sampleBanner() {
+    return h('section', { class: 'sample', 'aria-label': 'Esempio' },
+      h('span', { class: 'tag-sample' }, 'Esempio'),
+      h('p', {}, 'Qui sotto vedi un mese inventato. Carica l\'estratto conto CSV di bunq per vedere le tue spese.'),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: pickFile }, icon('up'), 'Carica il tuo CSV'));
+  }
+
+  function monthBar(months, s) {
+    const i = months.indexOf(ui.month);
+    const go = d => { ui.month = months[i + d]; ui.open.clear(); render(); };
+    const accts = [...new Set(s.tx.filter(t => t.date.startsWith(ui.month)).map(C.accountLabel))];
+    return h('div', { class: 'monthbar' },
+      h('div', { class: 'monthnav' },
+        h('label', { class: 'month-pick' },
+          h('span', { class: 'sr-only' }, 'Mese'),
+          h('select', { id: 'month', onchange: e => { ui.month = e.target.value; ui.open.clear(); render(); } },
+            months.slice().reverse().map(m => h('option', { value: m, selected: m === ui.month }, monthLabel(m)))),
+          icon('down')),
+        h('button', { class: 'round', type: 'button', 'aria-label': 'Mese precedente', disabled: i <= 0, onclick: () => go(-1) }, icon('left')),
+        h('button', { class: 'round', type: 'button', 'aria-label': 'Mese successivo', disabled: i >= months.length - 1, onclick: () => go(1) }, icon('right'))),
+      h('p', { class: 'accounts' }, isDemo() ? h('span', {}, 'Dati inventati') : accts.map(a => h('span', { class: 'mono' }, a))));
+  }
+
+  function hero(sum, cov, s, ctx) {
+    const bits = [];
+    if (cov.partial) bits.push(+cov.from.slice(8) === +cov.to.slice(8) ? 'solo il ' + (+cov.from.slice(8)) + ' ' + monthName(ui.month) : 'dal ' + (+cov.from.slice(8)) + ' al ' + (+cov.to.slice(8)) + ' ' + monthName(ui.month));
+    if (sum.unOut) bits.push('di cui ' + euro(sum.unOut) + ' da classificare');
+    const d = C.delta(s.tx, ctx, ui.month, s.files);
+    let deltaEl = null;
+    if (d) {
+      const p = Math.abs(d.ratio);
+      const dir = p < 0.005 ? 'same' : d.ratio > 0 ? 'more' : 'less';
+      const ref = d.partial ? 'rispetto agli stessi giorni di ' + monthName(d.prev) : 'rispetto ' + aMonth(d.prev);
+      const text = dir === 'same' ? 'Come ' + (d.partial ? 'negli stessi giorni di ' + monthName(d.prev) : aMonth(d.prev).replace(/^ad? /, 'a ')) : pctf.format(p) + (dir === 'more' ? ' in più ' : ' in meno ') + ref;
+      deltaEl = h('p', { class: 'delta ' + dir }, icon(dir === 'more' ? 'up' : dir === 'less' ? 'dn' : 'same'), text);
+    }
+    const facts = [];
+    if (sum.incomeTx.length) facts.push(h('li', {}, 'Entrate ', h('b', {}, (sum.income > 0 ? '+' : '') + euro(sum.income))));
+    if (sum.back) facts.push(h('li', {}, 'Rimborsi e cashback sottratti ', h('b', {}, euro(sum.back))));
+    if (sum.internalOut) facts.push(h('li', {}, 'Giroconti esclusi ', h('b', {}, euro(sum.internalOut))));
+    return h('section', { class: 'hero', 'aria-label': 'Totale del mese' },
+      h('p', { class: 'eyebrow' }, 'Spese di ' + monthName(ui.month)),
+      h('p', { class: 'hero-value' }, euro(sum.total)),
+      bits.length ? h('p', { class: 'hero-sub' }, bits.join(', ')) : null,
+      deltaEl,
+      facts.length ? h('ul', { class: 'facts' }, facts) : null);
+  }
+
+  function attention(sum, s) {
+    const open = ui.open.has('__none');
+    const n = sum.unTx.length;
+    const list = sum.unTx.slice().sort((a, b) => Math.abs(b.t.cents) - Math.abs(a.t.cents));
+    return h('section', { class: 'attn', id: 'attn' },
+      h('button', { class: 'attn-head', type: 'button', 'aria-expanded': String(open), 'aria-controls': 'list-none', 'data-focus': 'attn', onclick: () => toggle('__none') },
+        icon('alert'),
+        h('span', { class: 'grow' },
+          h('span', {}, plural(n, 'movimento', 'movimenti') + ' da classificare'),
+          h('small', {}, open ? 'Tocca un movimento per scegliere la categoria.' : 'Scegli la categoria una volta e l\'app la ricorderà.')),
+        icon('right', 'chev')),
+      open ? txList(list, s, 'list-none') : null);
+  }
+
+  function categories(sum, s) {
+    const items = sum.rows.filter(g => g.spent > 0).map(g => Object.assign({ kind: 'cat' }, g));
+    if (sum.unOut > 0) items.push({ id: '__none', kind: 'none', spent: sum.unOut, count: sum.unTx.filter(w => w.t.cents < 0).length });
+    items.sort((a, b) => b.spent - a.spent);
+    const zero = sum.rows.filter(g => g.spent === 0);
+    const list = h('ul', { class: 'rows' });
+    for (const g of items) list.append(catRow(g, sum.total, s, false));
+    for (const g of zero) list.append(catRow(g, sum.total, s, true));
+    if (!items.length && !zero.length) list.append(h('li', { class: 'empty' }, 'Nessuna spesa in questo mese.'));
+    return h('section', { class: 'card', 'aria-labelledby': 'cat-title' },
+      h('div', { class: 'card-head' }, h('h2', { class: 'card-title', id: 'cat-title' }, 'Per categoria'), h('span', { class: 'card-note' }, 'quota sul totale')),
+      list);
+  }
+
+  function catRow(g, total, s, zero) {
+    const none = g.kind === 'none';
+    const open = !none && ui.open.has(g.id);
+    const share = total > 0 ? g.spent / total : 0;
+    const meta = [];
+    if (none) meta.push(plural(g.count, 'movimento', 'movimenti') + ' senza categoria');
+    else {
+      meta.push(plural(g.txs.length, 'movimento', 'movimenti'));
+      if (!zero) meta.push(pctf.format(share));
+      if (g.back > 0) meta.push(zero ? 'solo rimborsi ricevuti (' + euro(g.back) + '), nessuna spesa' : euro(Math.min(g.back, g.out)) + ' di rimborsi sottratti');
+    }
+    const btn = h('button', {
+      class: 'row-btn', type: 'button', 'data-focus': 'cat-' + g.id,
+      'aria-expanded': none ? null : String(open),
+      onclick: () => none ? openAttention() : toggle(g.id)
+    },
+      h('span', { class: 'row-name' }, none ? icon('alert') : icon('right'), h('span', {}, catLabel(none ? '' : g.id, s))),
+      h('span', { class: 'row-amt' }, euro(g.spent)),
+      zero ? null : h('span', { class: 'track', 'aria-hidden': 'true' }, h('span', { class: 'fill', style: 'width:' + (share * 100).toFixed(2) + '%' })),
+      h('span', { class: 'row-meta' }, meta.join(' · ')));
+    return h('li', { class: 'row' + (none ? ' warn' : '') + (zero ? ' zero' : '') }, btn,
+      open ? txList(g.txs.slice().sort((a, b) => b.t.date.localeCompare(a.t.date) || a.t.cents - b.t.cents), s) : null);
+  }
+
+  function txList(ws, s, id) {
+    return h('ul', { class: 'txlist', id: id || null }, ws.map(w => {
+      const t = w.t;
+      const inflow = t.cents > 0;
+      const tags = [];
+      if (w.note === 'cashback') tags.push(h('span', { class: 'tag' }, 'cashback'));
+      else if (inflow && w.cat && w.cat !== 'entrate' && w.cat !== 'giroconto') tags.push(h('span', { class: 'tag' }, 'rimborso'));
+      if (!w.cat && inflow) tags.push(h('span', { class: 'tag' }, 'entrata'));
+      const sub = C.subline(t);
+      return h('li', {},
+        h('button', { class: 'tx-btn', type: 'button', 'data-focus': 'tx-' + t.id, onclick: () => openSheet(t) },
+          h('span', { class: 'tx-date' }, dShort.format(toDate(t.date))),
+          h('span', { class: 'tx-name' }, C.displayName(t), tags),
+          h('span', { class: 'tx-amt' + (inflow ? ' in' : '') }, (inflow ? '+' : '') + euro(Math.abs(t.cents))),
+          sub ? h('span', { class: 'tx-sub' }, sub) : null));
+    }));
+  }
+
+  function toggle(id) {
+    if (ui.open.has(id)) ui.open.delete(id); else ui.open.add(id);
+    ui.focusId = id === '__none' ? 'attn' : 'cat-' + id;
+    render();
+  }
+  function openAttention() {
+    ui.open.add('__none');
+    ui.focusId = 'attn';
+    render();
+    const el = $('#attn');
+    if (el) el.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  function trend(months, s, ctx) {
+    const last = months.slice(-12);
+    const vals = last.map(m => ({ m, total: C.summarize(s.tx, ctx, m).total, partial: C.coverage(m, s.files).partial }));
+    const max = Math.max(1, ...vals.map(v => v.total));
+    const row = h('div', { class: 'trend' }, vals.map(v => {
+      const sel = v.m === ui.month;
+      const px = Math.max(2, Math.round((v.total / max) * 86));
+      return h('button', {
+        class: 'col', type: 'button', 'aria-pressed': String(sel),
+        'aria-label': monthLabel(v.m) + ': ' + euro(v.total) + (v.partial ? ', mese parziale' : ''),
+        onclick: () => { ui.month = v.m; ui.open.clear(); render(); }
+      },
+        h('span', { class: 'col-plot' },
+          h('span', { class: 'col-bar', style: 'height:' + px + 'px' }),
+          sel ? h('span', { class: 'col-val', style: 'bottom:' + (px + 6) + 'px' }, euro0(v.total)) : null),
+        h('span', { class: 'col-lab' }, cap(dMonAbbr.format(toDate(v.m + '-01'))).replace('.', '') + (v.partial ? '*' : '')));
+    }));
+    return h('section', { class: 'card', 'aria-labelledby': 'trend-title' },
+      h('div', { class: 'card-head' }, h('h2', { class: 'card-title', id: 'trend-title' }, 'Mese per mese'), h('span', { class: 'card-note' }, 'tocca un mese')),
+      row,
+      vals.some(v => v.partial) ? h('p', { class: 'trend-note' }, '* mese parziale, il file non copre tutti i giorni') : null);
+  }
+
+  function outside(sum, s) {
+    const rows = [];
+    const simple = (id, label, amount, ws, note) => {
+      const open = ui.open.has(id);
+      return h('li', { class: 'row' },
+        h('button', { class: 'row-btn', type: 'button', 'aria-expanded': String(open), 'data-focus': 'cat-' + id, onclick: () => toggle(id) },
+          h('span', { class: 'row-name' }, icon('right'), h('span', {}, label)),
+          h('span', { class: 'row-amt' }, amount),
+          h('span', { class: 'row-meta' }, plural(ws.length, 'movimento', 'movimenti') + ' · ' + note)),
+        open ? txList(ws.slice().sort((a, b) => b.t.date.localeCompare(a.t.date)), s) : null);
+    };
+    if (sum.incomeTx.length) rows.push(simple('entrate', 'Entrate', (sum.income > 0 ? '+' : '') + euro(sum.income), sum.incomeTx, 'stipendio, rimborsi e altro'));
+    if (sum.internalTx.length) {
+      const amt = sum.internalOut ? euro(sum.internalOut) : '+' + euro(sum.internalIn);
+      rows.push(simple('giroconto', 'Giroconti tra i tuoi conti', amt, sum.internalTx, 'esclusi dal totale'));
+    }
+    return h('section', { class: 'card', 'aria-labelledby': 'out-title' },
+      h('div', { class: 'card-head' }, h('h2', { class: 'card-title', id: 'out-title' }, 'Non contano come spese')),
+      h('ul', { class: 'rows' }, rows));
+  }
+
+  function help() {
+    return h('details', { class: 'help', open: isDemo() },
+      h('summary', {}, h('span', {}, 'Come esporto l\'estratto conto?'), icon('right')),
+      h('div', { class: 'help-body' },
+        h('p', {}, h('b', {}, 'bunq. '), 'Profilo → Accounting → Export Statement. Scegli il conto, il periodo e il formato CSV.'),
+        h('p', {}, h('b', {}, 'Revolut. '), 'Home → Accounts → scegli la valuta → More (…) → Statement. Scegli il periodo e il formato Excel.'),
+        h('p', { class: 'fine' }, 'Puoi caricare più file insieme, anche con periodi che si sovrappongono: i movimenti già presenti vengono ignorati. Il file di Revolut viene riconosciuto dalle colonne, ma non è ancora stato provato con un estratto reale.')));
+  }
+
+  function dataCard(s) {
+    const files = s.files.slice().sort((a, b) => (b.to || '').localeCompare(a.to || ''));
+    const nRules = Object.keys(s.rules).length + Object.keys(s.overrides).length;
+    return h('section', { class: 'card', 'aria-labelledby': 'data-title' },
+      h('div', { class: 'card-head' }, h('h2', { class: 'card-title', id: 'data-title' }, 'I tuoi dati')),
+      h('div', { class: 'data' },
+        h('p', {}, storageOk ? plural(s.tx.length, 'movimento salvato', 'movimenti salvati') + ' su questo dispositivo.' : 'Questo browser non permette di salvare. La prossima volta dovrai caricare di nuovo il file.'),
+        h('ul', { class: 'files' }, files.map(f => h('li', {},
+          h('span', {}, rangeLabel(f) + ' · ' + plural(f.count, 'movimento', 'movimenti')),
+          h('span', { class: 'mono' }, f.name)))),
+        h('p', { class: 'fine' }, nRules ? plural(nRules, 'scelta ricordata', 'scelte ricordate') + ' per le categorie.' : 'Nessuna scelta di categoria salvata finora.'),
+        h('div', { class: 'actions' },
+          h('button', { class: 'linkish', type: 'button', onclick: exportBackup }, 'Esporta backup'),
+          nRules ? armButton('rules', 'Dimentica le scelte', 'Conferma: dimentica le scelte', forgetRules) : null,
+          armButton('all', 'Cancella tutti i dati', 'Conferma: cancella tutto', clearAll, 'danger'))));
+  }
+
+  function rangeLabel(f) {
+    if (!f.from || !f.to) return 'Periodo sconosciuto';
+    const a = toDate(f.from), b = toDate(f.to);
+    const sameYear = a.getFullYear() === b.getFullYear();
+    const fa = new Intl.DateTimeFormat('it-IT', sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(a);
+    const fb = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }).format(b);
+    return 'Dal ' + fa + ' al ' + fb;
+  }
+
+  function armButton(id, label, confirmLabel, action, cls) {
+    const armed = ui.armed === id;
+    return h('button', {
+      class: 'linkish' + (cls ? ' ' + cls : ''), type: 'button', 'data-focus': 'arm-' + id,
+      onclick: () => {
+        clearTimeout(ui.armTimer);
+        if (armed) { ui.armed = null; action(); return; }
+        ui.armed = id;
+        ui.focusId = 'arm-' + id;
+        ui.armTimer = setTimeout(() => { if (ui.armed === id) { ui.armed = null; render(); } }, 5000);
+        render();
+      }
+    }, armed ? confirmLabel : label);
+  }
+
+  function forgetRules() {
+    store.rules = {}; store.overrides = {};
+    save(); render();
+    say('Scelte cancellate. Le categorie tornano automatiche.');
+  }
+  function clearAll() {
+    store = emptyStore(); demo = null;
+    try { localStorage.removeItem(KEY); } catch (e) { /* niente da fare */ }
+    ui.month = null; ui.open.clear();
+    render();
+    say('Dati cancellati da questo dispositivo.');
+  }
+
+
+  function exportBackup() {
+    const data = JSON.stringify({ app: 'dove-spendo', v: 1, exported: new Date().toISOString(), tx: store.tx, files: store.files, rules: store.rules, overrides: store.overrides, cats: store.cats });
+    const name = 'dove-spendo-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    const file = new File([data], name, { type: 'application/json' });
+    const touch = matchMedia('(pointer: coarse)').matches;
+    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'Backup Dove Spendo' })
+        .then(() => say('Backup pronto. Per ripristinarlo usa «Carica estratto».'))
+        .catch(e => { if (!e || e.name !== 'AbortError') downloadFile(file); });
+    } else downloadFile(file);
+  }
+  function downloadFile(file) {
+    const url = URL.createObjectURL(file);
+    const a = h('a', { href: url, download: file.name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    say('Backup scaricato. Per ripristinarlo usa «Carica estratto».');
+  }
+  function importBackup(text) {
+    let b;
+    try { b = JSON.parse(text); } catch (e) { throw new Error('Il backup non è leggibile.'); }
+    if (!b || b.app !== 'dove-spendo' || !Array.isArray(b.tx)) throw new Error('Questo file non è un backup di Dove Spendo.');
+    const ok = t => t && typeof t.id === 'string' && typeof t.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && Number.isFinite(t.cents);
+    const have = new Set(store.tx.map(t => t.id));
+    let added = 0, latest = '';
+    for (const t of b.tx) {
+      if (!ok(t)) continue;
+      if (t.date > latest) latest = t.date;
+      if (!have.has(t.id)) { have.add(t.id); store.tx.push(t); added++; }
+    }
+    for (const f of Array.isArray(b.files) ? b.files : []) if (f && !store.files.some(x => x.name === f.name && x.from === f.from && x.to === f.to)) store.files.push(f);
+    for (const [k, v] of Object.entries(b.rules || {})) if (typeof v === 'string') store.rules[k] = v;
+    for (const [k, v] of Object.entries(b.overrides || {})) if (typeof v === 'string') store.overrides[k] = v;
+    for (const c of Array.isArray(b.cats) ? b.cats : []) if (c && typeof c.id === 'string' && typeof c.label === 'string' && !store.cats.some(x => x.id === c.id)) store.cats.push({ id: c.id, label: c.label });
+    store.tx.sort((a, c) => a.date < c.date ? -1 : a.date > c.date ? 1 : 0);
+    return { added, found: b.tx.length, latest };
+  }
+
+  /* ---------- installazione ---------- */
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; render(); });
+  window.addEventListener('appinstalled', () => { installEvt = null; render(); });
+  let hideInstall = false;
+  try { hideInstall = localStorage.getItem(KEY + ':no-install') === '1'; } catch (e) { /* niente */ }
+  function installCard() {
+    if (standalone || hideInstall) return null;
+    const mobile = matchMedia('(pointer: coarse)').matches;
+    if (!mobile && !installEvt) return null;
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const text = installEvt ? 'Aggiungila alla schermata Home: si apre a schermo intero e funziona anche senza connessione.'
+      : ios ? 'In Safari apri Condividi e scegli «Aggiungi alla schermata Home». Si aprirà a schermo intero e funziona anche senza connessione.'
+      : 'Nel menu ⋮ del browser scegli «Installa app» o «Aggiungi a schermata Home». Si aprirà a schermo intero e funziona anche senza connessione.';
+    return h('section', { class: 'install', 'aria-label': 'Installa l\'app' },
+      h('p', { class: 'install-title' }, 'Usala come un\'app'),
+      h('p', {}, text),
+      h('div', { class: 'install-row' },
+        installEvt ? h('button', { class: 'btn btn-primary', type: 'button', onclick: async () => { const ev = installEvt; installEvt = null; ev.prompt(); try { await ev.userChoice; } catch (e) { /* niente */ } render(); } }, 'Installa') : null,
+        h('button', { class: 'linkish', type: 'button', onclick: () => { hideInstall = true; try { localStorage.setItem(KEY + ':no-install', '1'); } catch (e) { /* niente */ } render(); } }, 'Non ora')));
+  }
+
+  /* ---------- scelta della categoria ---------- */
+  let lastFocus = null;
+  function openSheet(t) {
+    lastFocus = document.activeElement;
+    ui.sheetTx = t;
+    renderSheet();
+    sheet.hidden = false; backdrop.hidden = false;
+    document.body.classList.add('lock');
+    const title = sheet.querySelector('h2');
+    if (title) title.focus({ preventScroll: true });
+  }
+  function closeSheet() {
+    if (sheet.hidden) return;
+    sheet.hidden = true; backdrop.hidden = true;
+    document.body.classList.remove('lock');
+    const t = ui.sheetTx;
+    ui.sheetTx = null;
+    if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
+    else if (t) {
+      const el = content.querySelector('[data-focus="tx-' + t.id + '"]');
+      if (el) el.focus({ preventScroll: true });
+    }
+    lastFocus = null;
+  }
+  const rememberOn = () => { const el = $('#remember'); return !!(el && el.checked); };
+
+  function renderSheet() {
+    const s = active();
+    const t = ui.sheetTx;
+    if (!t) return;
+    const cur = C.categorize(t, ctxOf(s));
+    const name = C.displayName(t);
+    const inflow = t.cents > 0;
+    const hasRule = !!t.key && Object.prototype.hasOwnProperty.call(s.rules, t.key);
+    const rememberDefault = hasRule || (!inflow && cur.note !== 'cashback');
+    const how = { auto: 'scelta automatica', rule: 'ricordata', manual: 'scelta da te' }[cur.how];
+    const chip = (id, label) => h('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(cur.cat === id),
+      onclick: () => assign(t, id, rememberOn())
+    }, cur.cat === id ? icon('check') : null, label);
+    const input = h('input', { type: 'text', id: 'newcat', placeholder: 'Nuova categoria', maxlength: '28', autocomplete: 'off', 'aria-label': 'Nome della nuova categoria' });
+    const desc = t.kind === 'transfer' && cur.note !== 'cashback'
+      ? [t.desc && t.desc !== t.raw ? t.desc : '', t.cp ? C.maskIban(t.cp) : ''].filter(Boolean).join(' · ')
+      : C.subline(t);
+    sheet.replaceChildren(
+      h('div', { class: 'grab', 'aria-hidden': 'true' }),
+      h('div', { class: 'sheet-top' },
+        h('p', { class: 'sheet-kicker' }, dShort.format(toDate(t.date)) + ' ' + t.date.slice(0, 4) + ' · ' + C.kindLabel(t)),
+        h('h2', { id: 'sheet-title', tabindex: '-1' }, name),
+        h('span', { class: 'sheet-amt' + (inflow ? ' in' : '') }, (inflow ? '+' : '') + euro(Math.abs(t.cents)))),
+      desc ? h('p', { class: 'sheet-desc' }, desc) : null,
+      h('p', { class: 'sheet-now' }, 'Categoria: ', h('b', {}, catLabel(cur.cat, s)), how ? h('span', {}, ' (' + how + ')') : null),
+      t.key ? h('label', { class: 'remember' },
+        h('input', { type: 'checkbox', id: 'remember', checked: rememberDefault }),
+        h('span', {}, 'Usa sempre per «' + name + '»',
+          h('small', {}, inflow ? 'Per soldi ricevuti da persone di solito conviene di no: ogni volta è per un motivo diverso.' : 'Vale anche per i movimenti già caricati e per quelli futuri.'))) : null,
+      h('p', { class: 'group-label' }, 'Spese'),
+      h('div', { class: 'chips' }, allCats(s).map(c => chip(c.id, c.label))),
+      h('p', { class: 'group-label' }, 'Non è una spesa'),
+      h('div', { class: 'chips' }, chip('entrate', 'Entrata'), chip('giroconto', 'Giroconto tra miei conti')),
+      h('form', {
+        class: 'newcat',
+        onsubmit: e => {
+          e.preventDefault();
+          const v = input.value.trim();
+          if (!v) { input.focus(); return; }
+          assign(t, addCat(v), rememberOn());
+        }
+      }, input, h('button', { class: 'btn btn-quiet', type: 'submit' }, 'Aggiungi')),
+      h('div', { class: 'sheet-foot' },
+        cur.how === 'manual' || cur.how === 'rule' ? h('button', { class: 'linkish', type: 'button', onclick: () => resetTx(t) }, 'Torna alla scelta automatica') : h('span'),
+        h('button', { class: 'btn btn-quiet', type: 'button', onclick: closeSheet }, 'Chiudi')));
+  }
+
+  function addCat(label) {
+    const s = active();
+    const found = allCats(s).find(c => c.label.toLowerCase() === label.toLowerCase());
+    if (found) return found.id;
+    const id = 'u-' + Date.now().toString(36);
+    s.cats.push({ id, label });
+    return id;
+  }
+
+  function assign(t, cat, remember) {
+    const s = active();
+    const name = C.displayName(t);
+    if (remember && t.key) { s.rules[t.key] = cat; delete s.overrides[t.id]; }
+    else s.overrides[t.id] = cat;
+    save();
+    closeSheet();
+    render();
+    const label = catLabel(cat, s);
+    say(remember && t.key ? '«' + name + '» andrà sempre in ' + label + '.' : 'Movimento spostato in ' + label + '.');
+  }
+
+  function resetTx(t) {
+    const s = active();
+    delete s.overrides[t.id];
+    if (t.key) delete s.rules[t.key];
+    save();
+    closeSheet();
+    render();
+    say('Tornata la scelta automatica.');
+  }
+
+  backdrop.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
+
+  /* ---------- caricamento file ---------- */
+  function pickFile() { fileInput.click(); }
+  document.querySelectorAll('[data-upload]').forEach(b => b.addEventListener('click', pickFile));
+
+  let xlsxPromise = null;
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!xlsxPromise) xlsxPromise = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = XLSX_URL;
+      sc.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('Lettore Excel non disponibile.'));
+      sc.onerror = () => { xlsxPromise = null; reject(new Error('Non riesco a caricare il lettore Excel. Esporta il file in CSV e riprova.')); };
+      document.head.appendChild(sc);
+    });
+    return xlsxPromise;
+  }
+
+  async function readRows(f) {
+    const buf = await f.arrayBuffer();
+    if (/\.xlsx?$/i.test(f.name)) {
+      const X = await loadXLSX();
+      const wb = X.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      return X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    }
+    let text = new TextDecoder('utf-8').decode(buf);
+    if (/\uFFFD/.test(text)) text = new TextDecoder('windows-1252').decode(buf);
+    return C.parseCSV(text);
+  }
+
+  fileInput.addEventListener('change', async () => {
+    const files = [...fileInput.files];
+    fileInput.value = '';
+    if (!files.length) return;
+    let added = 0, found = 0, latest = '', restored = false;
+    const errors = [];
+    for (const f of files) {
+      try {
+        if (/\.json$/i.test(f.name) || f.type === 'application/json') {
+          const r = importBackup(await f.text());
+          added += r.added; found += r.found; restored = true;
+          if (r.latest > latest) latest = r.latest;
+          continue;
+        }
+        const parsed = C.rowsToTx(await readRows(f), f.name);
+        if (!parsed.txs.length) throw new Error('Nel file non ci sono movimenti.');
+        added += C.merge(store, parsed);
+        found += parsed.txs.length;
+        for (const t of parsed.txs) if (t.date > latest) latest = t.date;
+      } catch (e) {
+        errors.push(f.name + ': ' + (e && e.message ? e.message : 'file non leggibile.'));
+      }
+    }
+    if (found) {
+      demo = null;
+      save();
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+      ui.month = latest.slice(0, 7);
+      ui.open.clear();
+      render();
+      window.scrollTo({ top: 0 });
+    }
+    if (errors.length) say(errors.join(' '), true);
+    else {
+      const dup = found - added;
+      let msg = restored ? 'Backup ripristinato. ' : '';
+      msg += added ? 'Caricati ' + plural(added, 'movimento nuovo', 'movimenti nuovi') + '.' : 'Nessun movimento nuovo.';
+      if (dup) msg += ' ' + (dup === 1 ? '1 c\'era già.' : dup + ' c\'erano già.');
+      if (!storageOk) msg += ' Questo browser non salva i dati: la prossima volta ricarica il file.';
+      say(msg);
+    }
+  });
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  render();
+})();
+</script>
+</body>
+</html>

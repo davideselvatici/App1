@@ -1,0 +1,49 @@
+DOVE SPENDO, app installabile
+=============================
+
+Cosa contiene questa cartella
+- index.html e sw.js: l'app e la parte che la fa funzionare anche offline
+- manifest.webmanifest e le icone: nome e icona sulla schermata Home
+- file .woff2: i caratteri, così non servono connessioni esterne
+- xlsx.full.min.js: serve solo per leggere gli estratti Revolut in formato Excel
+
+I dati non stanno in questi file. Restano sul telefono di chi usa l'app,
+quindi il codice può essere pubblico senza problemi.
+
+
+1. METTERLA ONLINE (gratis, con GitHub Pages)
+
+   a. Crea un account su github.com, se non ce l'hai.
+   b. Crea un nuovo repository pubblico, per esempio "dove-spendo".
+   c. Nel repository: Add file > Upload files. Carica TUTTI i file di questa
+      cartella (i file, non la cartella). Poi "Commit changes".
+   d. Settings > Pages. In "Build and deployment" scegli "Deploy from a branch",
+      branch "main" e cartella "/ (root)". Salva.
+   e. Dopo qualche minuto l'app è online all'indirizzo
+      https://TUO-NOME-UTENTE.github.io/dove-spendo/
+
+   Dal computer è più comodo, ma si può fare anche dal browser del telefono:
+   prima estrai lo zip nell'app File e poi seleziona tutti i file.
+
+
+2. INSTALLARLA SUL TELEFONO
+
+   iPhone: apri l'indirizzo in Safari, poi Condividi > "Aggiungi alla schermata Home".
+   Android: apri l'indirizzo in Chrome, poi menu ⋮ > "Installa app"
+            (o "Aggiungi a schermata Home").
+
+   Da quel momento si apre dall'icona, a schermo intero, anche senza connessione.
+
+
+3. SPOSTARE I DATI
+
+   L'app installata non vede i dati della versione aperta dentro Claude:
+   ricarica gli estratti conto CSV. In futuro, per cambiare telefono o per
+   sicurezza, usa "Esporta backup" (in "I tuoi dati") e ripristinalo con
+   "Carica estratto".
+
+
+4. AGGIORNARLA
+
+   Carica su GitHub i nuovi file al posto dei vecchi. L'app installata si
+   aggiorna da sola la volta dopo che la apri con la connessione attiva.

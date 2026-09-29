@@ -1,0 +1,6 @@
+Caratteri
+- Bricolage Grotesque, IBM Plex Sans, IBM Plex Mono: SIL Open Font License 1.1
+  (file presi dai pacchetti Fontsource).
+
+Librerie
+- SheetJS Community Edition (xlsx.full.min.js), versione 0.18.5: Apache License 2.0.
