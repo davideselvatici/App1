@@ -87,9 +87,9 @@ a { color: var(--accent); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .mono { font-family: var(--font-mono); font-size: 12px; }
 .app-rail { display: none; }
-.brand-mark { width: 38px; height: 38px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); border-radius: 12px; font: 600 26px/1 var(--font-display); }
+.brand-mark { width: 38px; height: 38px; flex: none; display: block; object-fit: contain; background: #2b614a; border-radius: 12px; }
 .mobile-brand { display: flex; align-items: center; gap: 9px; font: 600 18px/1 var(--font-display); letter-spacing: -.5px; }
-.mobile-brand .brand-mark { width: 30px; height: 30px; font-size: 22px; border-radius: 9px; }
+.mobile-brand .brand-mark { width: 30px; height: 30px; border-radius: 9px; }
 .page { max-width: 1040px; margin-inline: auto; padding: calc(24px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-left, 0px)) calc(108px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 28px; }
 .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 24px 12px; }
 .mobile-brand { grid-area: 1 / 1; }
@@ -368,7 +368,7 @@ input::placeholder { color: var(--muted); font-weight: 400; }
 <body>
 <div id="app-shell">
   <aside class="app-rail" aria-label="Navigazione principale">
-    <a class="rail-brand" href="#overview"><span class="brand-mark" aria-hidden="true">d.</span><span>Dove<br>Spendo</span></a>
+    <a class="rail-brand" href="#overview"><img class="brand-mark" src="icon-192.png" width="38" height="38" alt="" aria-hidden="true"><span>Dove<br>Spendo</span></a>
     <p class="rail-kicker">Il tuo spazio</p>
     <nav class="rail-nav">
       <a href="#overview" data-nav aria-current="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Panoramica</a>
@@ -380,7 +380,7 @@ input::placeholder { color: var(--muted); font-weight: 400; }
   </aside>
 <div class="page">
   <header class="topbar">
-    <div class="mobile-brand"><span class="brand-mark" aria-hidden="true">d.</span>Dove Spendo</div>
+    <div class="mobile-brand"><img class="brand-mark" src="icon-192.png" width="30" height="30" alt="" aria-hidden="true">Dove Spendo</div>
     <div class="header-copy"><p class="section-kicker">Benvenuto nel tuo spazio</p><h1 class="brand">Il tuo mese, in chiaro.</h1><p class="header-caption">Le tue spese, con un po' più di prospettiva.</p></div>
     <button class="btn btn-primary" type="button" id="upload" data-upload>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>
