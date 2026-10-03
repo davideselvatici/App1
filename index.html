@@ -384,8 +384,13 @@ input::placeholder { color: var(--muted); font-weight: 400; }
   .sample-copy { flex: 1 1 auto; }
   .sample p { display: none; }
   .sample .linkish { font-size: 12px; }
-  .facts { gap: 12px; }
-  .facts b { font-size: clamp(14px, 4.5vw, 18px); overflow-wrap: anywhere; }
+  /* Sul telefono entrate, uscite e saldo vanno in colonna: anche cifre a cinque zeri stanno su una riga. */
+  .hero-value.long { font-size: clamp(24px, 8vw, 64px); }
+  .facts { grid-template-columns: minmax(0, 1fr); gap: 8px; padding-top: 16px; margin-top: 20px; }
+  .facts li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 12px; }
+  .facts span { font-size: 12px; }
+  .facts b { font-size: 17px; white-space: nowrap; }
+  .facts small { grid-column: 1 / -1; text-align: right; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -631,14 +636,92 @@ window.DSCore = (function () {
     if (m) return +m[2] > 12 && +m[1] <= 12 ? validYmd(m[3], m[1], m[2]) : validYmd(m[3], m[2], m[1]);
     m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
     if (m) return validYmd(m[1], m[2], m[3]);
+    // Mese scritto, come negli estratti consolidati di Revolut: «1 set 2026», «1 Sep 2026», «Sep 1, 2026».
+    m = s.match(/^(\d{1,2})\.?\s+(\p{L}{3,})\.?\s+(\d{4})\b/u);
+    if (m && MONTHS[m[2].slice(0, 3).toLowerCase()]) return validYmd(m[3], MONTHS[m[2].slice(0, 3).toLowerCase()], m[1]);
+    m = s.match(/^(\p{L}{3,})\.?\s+(\d{1,2}),?\s+(\d{4})\b/u);
+    if (m && MONTHS[m[1].slice(0, 3).toLowerCase()]) return validYmd(m[3], MONTHS[m[1].slice(0, 3).toLowerCase()], m[2]);
     return '';
   }
+  const MONTHS = { gen: 1, jan: 1, feb: 2, mar: 3, mrt: 3, apr: 4, mag: 5, may: 5, mei: 5, giu: 6, jun: 6, lug: 7, jul: 7, ago: 8, aug: 8, set: 9, sep: 9, ott: 10, oct: 10, okt: 10, nov: 11, dic: 12, dec: 12 };
 
   function normHeader(h) { return String(h == null ? '' : h).replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, ' '); }
   function findCol(header, names) { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; }
 
+  /* Movimenti verso salvadanai, fondi e conti di investimento della stessa persona. */
+  const REV_INTERNAL = /^(to|from|verso|da|dal|dalla|al|alla|a|naar|van)\b.*\b(pocket|vault|savings|salvadanaio|risparmi|spaar|fondi monetari|money market|flexible|investimento|investment|deposito|deposit)/i;
+
+  /* Identificativo stabile: lo stesso movimento caricato due volte viene riconosciuto. */
+  function addTx(out, seen, t) {
+    const base = [t.src, t.account, t.date, t.cents, t.cp, t.raw, t.desc].join('|');
+    const n = (seen.get(base) || 0) + 1;
+    seen.set(base, n);
+    t = Object.assign({ id: t.src + '-' + fnv(base) + '-' + n }, t);
+    t.key = keyFor(t);
+    out.push(t);
+  }
+
+  function fileInfo(out, fileName) {
+    const m = String(fileName || '').match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/);
+    const dates = out.map(t => t.date).sort();
+    return { name: String(fileName || 'file'), from: m ? m[1] : (dates[0] || ''), to: m ? m[2] : (dates[dates.length - 1] || ''), count: out.length, src: out[0] ? out[0].src : '' };
+  }
+
+  /* Estratto conto consolidato di Revolut (CSV): riepiloghi e poi una tabella per conto, ognuna sotto
+     un titolo come «Conto personale (EUR)». Si leggono i movimenti dei conti e i rendimenti di fondi e
+     risparmi; per i conti in altre valute si usa la colonna già convertita in euro. */
+  const REV_MONEY = ['denaro in entrata/uscita', 'money in/out', 'money in / out'];
+  const REV_RETURNS = ['rendimenti netti distribuiti e prelevati', 'net interest', 'interessi netti'];
+  const isRevHeader = h => COLS.date.includes(h[0]) && h.some(x => REV_MONEY.includes(x) || REV_RETURNS.includes(x));
+
+  function revolutStatementToTx(rows, fileName) {
+    const get = (r, i) => (i === -1 || r[i] == null) ? '' : String(r[i]).trim();
+    // Il nome e l'IBAN della persona servono a riconoscere i soldi spostati tra i suoi conti.
+    let holder = '', iban = '';
+    for (const r of rows) {
+      const k = normHeader(r[0]);
+      if (!holder && /^(nome del conto|account name|titolare del conto|account holder)$/.test(k) && /^\p{L}[\p{L} .'-]+$/u.test(get(r, 1))) holder = normText(r[1]);
+      if (!iban && /iban/.test(k)) iban = cleanIban(r[1]);
+    }
+    const out = [], seen = new Map();
+    let skipped = 0, title = '', cur = 'EUR', table = null;
+    for (const row of rows) {
+      const h = row.map(normHeader);
+      const first = get(row, 0);
+      if (isRevHeader(h)) {
+        const money = h.flatMap((x, i) => REV_MONEY.includes(x) ? [i] : []);
+        const returns = h.flatMap((x, i) => REV_RETURNS.includes(x) ? [i] : []);
+        table = { amount: money.length ? money : returns, returns: !money.length, desc: findCol(h, COLS.description), cat: findCol(h, ['categoria', 'category']), account: 'Revolut ' + title + ' ' + cur };
+        continue;
+      }
+      const t = first.match(/^(.*?)\s*\(([A-Z]{3})\)$/);
+      if (t && row.slice(1).every(x => String(x == null ? '' : x).trim() === '')) { title = t[1].replace(/\s+/g, ' '); cur = t[2]; table = null; continue; }
+      if (!table) continue;
+      const date = parseDate(first);
+      if (!date) { table = null; continue; } // «Totale» e i separatori chiudono la tabella
+      const cells = table.amount.map(i => get(row, i));
+      const eur = cells.find(c => /€|EUR/i.test(c));
+      const amt = parseAmount(eur !== undefined ? eur : cells[0]);
+      if (!Number.isFinite(amt)) { skipped++; continue; }
+      const cents = Math.round(amt * 100);
+      if (cents === 0) continue;
+      const desc = get(row, table.desc), D = normText(desc), category = normText(get(row, table.cat));
+      let kind;
+      if (table.returns) kind = 'reward';
+      else if (/RICARICA|TOP.?UP|CAMBIO|EXCHANGE/.test(category) || REV_INTERNAL.test(desc) || /^(CAMBIATO|EXCHANGED)\b/.test(D)) kind = 'internal';
+      else if (/^CANONE\b|PLAN FEE|COMMISSION/.test(D) || /COMMISSION|FEE/.test(category)) kind = 'fee';
+      else if (/CASHBACK|REWARD|INTERESS|INTEREST/.test(category)) kind = 'reward';
+      else if (/PRELIEV|ATM|CONTANT|CASH/.test(category)) kind = 'atm';
+      else if (/ESERCENTE|MERCHANT|CARTA|CARD|RIMBORS|REFUND/.test(category)) kind = 'card';
+      else kind = holder && D.includes(holder) ? 'internal' : 'transfer';
+      addTx(out, seen, { src: 'revolut', date, cents, cur: eur !== undefined ? 'EUR' : cur, account: table.account, cp: '', raw: desc, desc, kind, ...(iban ? { iban } : {}) });
+    }
+    return { txs: out, file: fileInfo(out, fileName), skipped };
+  }
+
   function rowsToTx(rows, fileName) {
     rows = (rows || []).filter(r => Array.isArray(r) && r.some(x => String(x == null ? '' : x).trim() !== ''));
+    if (rows.some(r => isRevHeader(r.map(normHeader)))) return revolutStatementToTx(rows, fileName);
     let hi = -1, H = null;
     for (let i = 0; i < Math.min(rows.length, 15); i++) {
       const h = rows[i].map(normHeader);
@@ -672,7 +755,7 @@ window.DSCore = (function () {
         cur = String(get(row, ix.cur)).trim().toUpperCase() || 'EUR';
         const type = String(get(row, ix.type)).toUpperCase();
         const product = String(get(row, ix.product)).trim();
-        if (/TOP.?UP|EXCHANGE|RICARICA|CAMBIO/.test(type) || /^(to|from|verso|da|naar|van)\b.*(pocket|vault|savings|salvadanaio|risparmi|spaar)/i.test(desc) || /savings|risparmi|deposit|spaar/i.test(product)) kind = 'internal';
+        if (/TOP.?UP|EXCHANGE|RICARICA|CAMBIO/.test(type) || REV_INTERNAL.test(desc) || /savings|risparmi|deposit|spaar/i.test(product)) kind = 'internal';
         else if (/^FEE$|COMMISSION/.test(type)) kind = 'fee';
         else if (/CASHBACK|REWARD|INTEREST|INTERESSI|RENTE/.test(type)) kind = 'reward';
         else if (/ATM|PRELIEVO/.test(type)) kind = 'atm';
@@ -694,17 +777,9 @@ window.DSCore = (function () {
       }
       if (!date || !Number.isFinite(cents)) { skipped++; continue; }
       if (cents === 0) continue;
-      const base = [src, account, date, cents, cp, raw, desc].join('|');
-      const n = (seen.get(base) || 0) + 1;
-      seen.set(base, n);
-      const t = { id: src + '-' + fnv(base) + '-' + n, src, date, cents, cur, account, cp, raw, desc, kind };
-      t.key = keyFor(t);
-      out.push(t);
+      addTx(out, seen, { src, date, cents, cur, account, cp, raw, desc, kind });
     }
-    const m = String(fileName || '').match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/);
-    const dates = out.map(t => t.date).sort();
-    const file = { name: String(fileName || 'file'), from: m ? m[1] : (dates[0] || ''), to: m ? m[2] : (dates[dates.length - 1] || ''), count: out.length, src: out[0] ? out[0].src : '' };
-    return { txs: out, file, skipped };
+    return { txs: out, file: fileInfo(out, fileName), skipped };
   }
 
   function merge(store, parsed) {
@@ -719,7 +794,10 @@ window.DSCore = (function () {
 
   function ownIbans(txs) {
     const s = new Set();
-    for (const t of txs) if (IBAN_RE.test(t.account || '')) s.add(t.account);
+    for (const t of txs) {
+      if (IBAN_RE.test(t.account || '')) s.add(t.account);
+      if (IBAN_RE.test(t.iban || '')) s.add(t.iban); // conto Revolut letto dall'estratto consolidato
+    }
     return s;
   }
 
@@ -1243,7 +1321,7 @@ window.DSCore = (function () {
     return h('section', { class: 'hero', 'aria-label': 'Totale del mese' },
       h('div', { class: 'hero-top' }, h('div', { class: 'hero-main' },
         h('p', { class: 'eyebrow' }, 'Spese totali · ' + monthName(ui.month)),
-        h('p', { class: 'hero-value' }, euro(sum.total)),
+        h('p', { class: 'hero-value' + (euro(sum.total).length > 8 ? ' long' : '') }, euro(sum.total)),
         bits.length ? h('p', { class: 'hero-sub' }, bits.join(', ')) : null,
         deltaEl), spendingDonut(sum, s)),
       h('ul', { class: 'facts', 'aria-label': 'Entrate meno uscite' }, facts));
@@ -1442,8 +1520,8 @@ window.DSCore = (function () {
       h('summary', {}, h('span', { class: 'setting-symbol', 'aria-hidden': 'true' }, icon('book')), h('span', { class: 'setting-copy' }, h('span', { class: 'setting-title' }, 'Da dove comincio?'), h('span', { class: 'setting-sub' }, 'Esporta il tuo estratto bunq o Revolut')), icon('right', 'summary-chevron')),
       h('div', { class: 'help-body' },
         h('p', {}, h('b', {}, 'bunq. '), 'Profilo → Accounting → Export Statement. Scegli il conto, il periodo e il formato CSV.'),
-        h('p', {}, h('b', {}, 'Revolut. '), 'Home → Accounts → scegli la valuta → More (…) → Statement. Scegli il periodo e il formato Excel.'),
-        h('p', { class: 'fine' }, 'Puoi caricare più file insieme, anche con periodi che si sovrappongono: i movimenti già presenti vengono ignorati. Il file di Revolut viene riconosciuto dalle colonne, ma non è ancora stato provato con un estratto reale.')));
+        h('p', {}, h('b', {}, 'Revolut. '), 'Home → Accounts → scegli la valuta → More (…) → Statement. Scegli il periodo e il formato Excel. Va bene anche l\'estratto conto consolidato in CSV: contiene tutti i conti, e i rendimenti di fondi e risparmi contano come entrate.'),
+        h('p', { class: 'fine' }, 'Puoi caricare più file insieme, anche con periodi che si sovrappongono: i movimenti già presenti vengono ignorati. Per lo stesso periodo di Revolut carica un solo tipo di file, Excel o consolidato, altrimenti i movimenti risultano due volte.')));
   }
 
   function dataCard(s) {
