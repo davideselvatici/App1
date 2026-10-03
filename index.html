@@ -856,8 +856,8 @@ window.DSCore = (function () {
     return { prev, partial: cov.partial, now, before };
   }
 
-  function delta(txs, ctx, month, files) {
-    const c = compare(txs, ctx, month, files);
+  /* Variazione delle spese totali, dal risultato di compare. */
+  function deltaOf(c) {
     if (!c || !c.before.total) return null;
     return { prev: c.prev, ratio: (c.now.total - c.before.total) / c.before.total, partial: c.partial, now: c.now.total, before: c.before.total };
   }
@@ -957,7 +957,7 @@ window.DSCore = (function () {
     '"2026-08-25";"2026-08-25";"2150,00";"NL00BUNQ0000000000";"NL00RABO0000000006";"Azienda Esempio BV";"Stipendio agosto"'
   ].join('\n');
 
-  return { CATS, parseCSV, parseAmount, parseDate, rowsToTx, merge, ownIbans, categorize, lookupItems, summarize, coverage, compare, delta, categoryChanges, topMerchants, biggestExpense, daysCovered, monthsOf, daysIn, prevMonth, displayName, subline, kindLabel, accountLabel, maskIban, isCashback, normText, EXAMPLE_CSV };
+  return { CATS, parseCSV, parseAmount, parseDate, rowsToTx, merge, ownIbans, categorize, lookupItems, summarize, coverage, compare, deltaOf, categoryChanges, topMerchants, biggestExpense, daysCovered, monthsOf, daysIn, prevMonth, displayName, subline, kindLabel, accountLabel, maskIban, isCashback, normText, EXAMPLE_CSV };
 })();
 </script>
 
@@ -1224,7 +1224,7 @@ window.DSCore = (function () {
     const bits = [];
     if (cov.partial) bits.push(+cov.from.slice(8) === +cov.to.slice(8) ? 'solo il ' + (+cov.from.slice(8)) + ' ' + monthName(ui.month) : 'dal ' + (+cov.from.slice(8)) + ' al ' + (+cov.to.slice(8)) + ' ' + monthName(ui.month));
     if (sum.unOut) bits.push('di cui ' + euro(sum.unOut) + ' da classificare');
-    const d = cmp && cmp.before.total ? { prev: cmp.prev, partial: cmp.partial, ratio: (cmp.now.total - cmp.before.total) / cmp.before.total } : null;
+    const d = C.deltaOf(cmp);
     let deltaEl = null;
     if (d) {
       const p = Math.abs(d.ratio);
