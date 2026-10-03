@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/svg+xml" sizes="any" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 @font-face { font-family: "Bricolage Grotesque"; src: url(bricolage-grotesque.woff2) format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
@@ -368,7 +369,7 @@ input::placeholder { color: var(--muted); font-weight: 400; }
 <body>
 <div id="app-shell">
   <aside class="app-rail" aria-label="Navigazione principale">
-    <a class="rail-brand" href="#overview"><img class="brand-mark" src="icon-192.png" width="38" height="38" alt="" aria-hidden="true"><span>Dove<br>Spendo</span></a>
+    <a class="rail-brand" href="#overview"><img class="brand-mark" src="icon.svg" width="38" height="38" alt="" aria-hidden="true"><span>Dove<br>Spendo</span></a>
     <p class="rail-kicker">Il tuo spazio</p>
     <nav class="rail-nav">
       <a href="#overview" data-nav aria-current="location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Panoramica</a>
@@ -380,7 +381,7 @@ input::placeholder { color: var(--muted); font-weight: 400; }
   </aside>
 <div class="page">
   <header class="topbar">
-    <div class="mobile-brand"><img class="brand-mark" src="icon-192.png" width="30" height="30" alt="" aria-hidden="true">Dove Spendo</div>
+    <div class="mobile-brand"><img class="brand-mark" src="icon.svg" width="30" height="30" alt="" aria-hidden="true">Dove Spendo</div>
     <div class="header-copy"><p class="section-kicker">Benvenuto nel tuo spazio</p><h1 class="brand">Il tuo mese, in chiaro.</h1><p class="header-caption">Le tue spese, con un po' più di prospettiva.</p></div>
     <button class="btn btn-primary" type="button" id="upload" data-upload>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>
