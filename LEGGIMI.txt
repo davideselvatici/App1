@@ -47,3 +47,48 @@ quindi il codice può essere pubblico senza problemi.
 
    Carica su GitHub i nuovi file al posto dei vecchi. L'app installata si
    aggiorna da sola la volta dopo che la apri con la connessione attiva.
+
+
+5. RICERCA ONLINE (facoltativa)
+
+   L'app riconosce da sola supermercati, bar, treni, bollette e simili.
+   Per gli esercenti che non conosce, Tavily cerca informazioni online e
+   Groq sceglie la categoria dopo il caricamento.
+   Questa funzione sostituisce la ricerca a pagamento con Claude.
+
+   a. Crea una chiave API personale su https://console.groq.com/keys
+      mantenendo il piano gratuito (Free).
+   b. Crea una chiave Tavily su https://app.tavily.com/home scegliendo il
+      piano gratuito (Free), senza aggiungere una carta di credito.
+   c. Nell'app, sezione "Ricerca online", incolla entrambe le chiavi e
+      tocca "Attiva gratis".
+
+   Tavily offre 1.000 crediti al mese: una ricerca basic per esercente usa
+   un credito. Groq offre richieste gratuite al modello con limiti al minuto
+   e al giorno. Mantieni entrambi i piani gratuiti, senza aggiungere un metodo
+   di pagamento o passare a un piano a pagamento: quando raggiungi un limite,
+   la ricerca si ferma fino al suo ripristino.
+
+   Le chiavi restano solo nel browser sul telefono e non finiscono nel
+   backup. Per gli esercenti sconosciuti dei pagamenti con carta, Tavily
+   riceve solo il nome ripulito e il luogo. Groq riceve nome e descrizione
+   ripuliti, importo e risultati della ricerca dei soli movimenti sconosciuti.
+   Le richieste escludono IBAN e identificativi del conto.
+   Le categorie trovate vengono conservate per
+   i caricamenti successivi. Se la categoria è sbagliata, tocca il movimento
+   e scegli quella giusta: la tua scelta vale anche per il futuro.
+
+   Serve una connessione solo per questa funzione. Il caricamento degli
+   estratti, le categorie locali e il resto dell'app funzionano offline.
+
+   Piani e limiti aggiornati:
+   https://www.tavily.com/pricing
+   https://docs.tavily.com/documentation/api-credits
+   https://console.groq.com/docs/billing-faqs
+   https://console.groq.com/docs/rate-limits
+
+   Per il trattamento dei dati da parte di Groq:
+   https://console.groq.com/docs/your-data
+
+   Per verificare il codice: bun test. Non sono incluse chiavi API reali;
+   la ricerca online richiede le tue chiavi personali.
