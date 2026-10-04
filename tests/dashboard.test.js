@@ -17,11 +17,11 @@ const HEADER = '"Date";"Interest Date";"Amount";"Account";"Counterparty";"Name";
 const line = (date, amount, name, desc, cp = '') => `"${date}";"${date}";"${amount}";"NL00BUNQ0000000000";"${cp}";"${name}";"${desc}"`;
 
 const JULY = [HEADER,
-  line('2026-07-01', '-650,00', 'Mario Rossi', 'Affitto luglio', 'NL00INGB0000000001'),
-  line('2026-07-03', '-20,00', 'Jumbo Centrum', 'Jumbo Centrum ENSCHEDE, NL'),
-  line('2026-07-10', '-50,00', 'Pizzeria Napoli', 'Pizzeria Napoli ENSCHEDE, NL'),
-  line('2026-07-20', '-30,00', 'Ristorante Il Faro', 'Ristorante Il Faro ENSCHEDE, NL'),
-  line('2026-07-25', '2000,00', 'Azienda Esempio BV', 'Stipendio luglio', 'NL00RABO0000000006')
+  line('2026-07-01', '-2950,00', 'Mario Rossi', 'Affitto luglio', 'NL00INGB0000000001'),
+  line('2026-07-03', '-140,00', 'Jumbo Centrum', 'Jumbo Centrum ENSCHEDE, NL'),
+  line('2026-07-10', '-60,00', 'Pizzeria Napoli', 'Pizzeria Napoli ENSCHEDE, NL'),
+  line('2026-07-20', '-45,00', 'Ristorante Il Faro', 'Ristorante Il Faro ENSCHEDE, NL'),
+  line('2026-07-25', '10250,00', 'Azienda Esempio BV', 'Stipendio luglio', 'NL00RABO0000000006')
 ].join('\n');
 
 function storeOf(...files) {
@@ -38,12 +38,12 @@ describe('monthly balance: total in minus total out', () => {
   test('sample month splits into income by category, spending, and balance', () => {
     const store = demo();
     const sum = C.summarize(store.tx, ctxOf(store), '2026-08');
-    expect(sum.total).toBe(100622);
-    expect(sum.inflow).toBe(216243);
-    expect(sum.net).toBe(115621);
+    expect(sum.total).toBe(780000);
+    expect(sum.inflow).toBe(1030000);
+    expect(sum.net).toBe(250000);
     expect(sum.back).toBe(0);
-    expect(sum.count).toBe(16);
-    expect(sum.incomeRows.map(g => [g.id, g.total])).toEqual([['stipendio', 215000], ['interessi', 43], ['rimborsi', 1200]]);
+    expect(sum.count).toBe(23);
+    expect(sum.incomeRows.map(g => [g.id, g.total])).toEqual([['stipendio', 1025000], ['interessi', 125], ['rimborsi', 4875]]);
   });
 
   test('the balance equals the sum of every non-transfer movement', () => {
@@ -61,18 +61,18 @@ describe('monthly balance: total in minus total out', () => {
     };
     const after = C.summarize(store.tx, ctxOf(store, { overrides }), '2026-08');
     expect(after.net).toBe(before.net);
-    expect(after.inflow).toBe(before.inflow - 1200);
-    expect(after.total).toBe(before.total - 1200);
-    expect(after.back).toBe(1200);
+    expect(after.inflow).toBe(before.inflow - 4875);
+    expect(after.total).toBe(before.total - 4875);
+    expect(after.back).toBe(4875);
   });
 
   test('transfers between own accounts stay out of the balance', () => {
     const store = demo();
     const rent = byName(store, 'Mario Rossi');
     const sum = C.summarize(store.tx, ctxOf(store, { overrides: { [rent.id]: 'giroconto' } }), '2026-08');
-    expect(sum.internalOut).toBe(65000);
-    expect(sum.total).toBe(100622 - 65000);
-    expect(sum.net).toBe(115621 + 65000);
+    expect(sum.internalOut).toBe(295000);
+    expect(sum.total).toBe(780000 - 295000);
+    expect(sum.net).toBe(250000 + 295000);
   });
 
   test('refunds and unclassified money received count as income', () => {
@@ -110,12 +110,12 @@ describe('month-over-month comparison', () => {
     const cmp = C.compare(store.tx, ctxOf(store), '2026-08', store.files);
     expect(cmp.prev).toBe('2026-07');
     expect(cmp.partial).toBe(false);
-    expect(cmp.before.total).toBe(75000);
+    expect(cmp.before.total).toBe(319500);
     const changes = C.categoryChanges(cmp);
-    expect(changes[0]).toMatchObject({ id: 'viaggi', diff: 8999, before: 0 });
-    expect(changes.find(v => v.id === 'ristoranti').diff).toBe(7490 - 8000);
+    expect(changes[0]).toMatchObject({ id: 'viaggi', diff: 162999, before: 0 });
+    expect(changes.find(v => v.id === 'ristoranti').diff).toBe(24840 - 10500);
     expect(changes.some(v => v.id === 'affitto')).toBe(false);
-    expect(C.deltaOf(cmp).ratio).toBeCloseTo((100622 - 75000) / 75000);
+    expect(C.deltaOf(cmp).ratio).toBeCloseTo((780000 - 319500) / 319500);
   });
 
   test('a partial month is compared with the same days of the month before', () => {
@@ -123,7 +123,7 @@ describe('month-over-month comparison', () => {
     const store = storeOf([JULY, '2026-07-01_2026-07-31.csv'], [half, '2026-08-01_2026-08-15.csv']);
     const cmp = C.compare(store.tx, ctxOf(store), '2026-08', store.files);
     expect(cmp.partial).toBe(true);
-    expect(cmp.before.total).toBe(72000);
+    expect(cmp.before.total).toBe(315000);
   });
 
   test('no comparison without data for the month before', () => {
@@ -136,15 +136,17 @@ describe('month-over-month comparison', () => {
 describe('where the money goes', () => {
   test('top merchants are grouped, ranked, and limited', () => {
     const store = demo();
-    const top = C.topMerchants(C.summarize(store.tx, ctxOf(store), '2026-08'), 5);
+    const sum = C.summarize(store.tx, ctxOf(store), '2026-08');
+    const top = C.topMerchants(sum, 5);
     expect(top.map(m => [m.name, m.spent, m.cat])).toEqual([
-      ['Mario Rossi', 65000, 'affitto'],
-      ['Ryanair', 8999, 'viaggi'],
-      ['Jumbo Centrum', 5035, 'spesa'],
-      ['Vitens NV', 4500, 'casa'],
-      ['Albert Heijn', 4320, 'spesa']
+      ['Mario Rossi', 295000, 'affitto'],
+      ['Amazon', 149900, 'shopping'],
+      ['Booking.com', 124000, 'viaggi'],
+      ['Ikea', 75900, 'casa'],
+      ['Ryanair', 38999, 'viaggi']
     ]);
-    expect(top[2].txs).toHaveLength(2);
+    expect(C.topMerchants(sum, 10).find(m => m.name === 'Jumbo Centrum')).toMatchObject({ spent: 19935, cat: 'spesa' });
+    expect(C.topMerchants(sum, 10).find(m => m.name === 'Jumbo Centrum').txs).toHaveLength(2);
   });
 
   test('refunds stay in income and unclassified spending is included', () => {
@@ -167,7 +169,7 @@ describe('where the money goes', () => {
     expect(C.displayName(C.biggestExpense(C.summarize(store.tx, ctx, '2026-08')).t)).toBe('Mario Rossi');
     const rent = byName(store, 'Mario Rossi');
     const withoutRent = C.summarize(store.tx, ctxOf(store, { overrides: { [rent.id]: 'giroconto' } }), '2026-08');
-    expect(C.displayName(C.biggestExpense(withoutRent).t)).toBe('Ryanair');
+    expect(C.displayName(C.biggestExpense(withoutRent).t)).toBe('Amazon');
   });
 
   test('daily average uses only the days covered by the statements', () => {

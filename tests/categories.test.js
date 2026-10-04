@@ -32,7 +32,7 @@ describe('categories', () => {
     ['-45,00', 'Vitens NV', 'Acconto acqua', 'casa'],
     ['-12,00', 'Pathe Enschede', 'Pathe Enschede ENSCHEDE, NL', 'svago'],
     ['-59,99', 'Steam', 'Steam BELLEVUE, US', 'svago'],
-    ['2150,00', 'Azienda Esempio BV', 'Stipendio agosto', 'stipendio'],
+    ['1200,00', 'Azienda Esempio BV', 'Stipendio agosto', 'stipendio'],
     ['1,23', 'bunq', 'Interest payout', 'interessi'],
     ['15,00', 'Giulia Bianchi', 'Pizza', 'rimborsi'],
     ['20,00', 'Zalando', 'Zalando BERLIN, DE', 'rimborsi']

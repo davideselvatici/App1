@@ -1066,22 +1066,29 @@ window.DSCore = (function () {
 
   const EXAMPLE_CSV = [
     '"Date";"Interest Date";"Amount";"Account";"Counterparty";"Name";"Description"',
-    '"2026-08-01";"2026-08-01";"-650,00";"NL00BUNQ0000000000";"NL00INGB0000000001";"Mario Rossi";"Affitto agosto"',
-    '"2026-08-02";"2026-08-02";"-43,20";"NL00BUNQ0000000000";"";"Albert Heijn 1001";"Albert Heijn 1001 ENSCHEDE, NL"',
-    '"2026-08-02";"2026-08-02";"0,43";"NL00BUNQ0000000000";"NL00BUNQ0000000002";"bunq";"Congratulazioni, hai vinto l’1% del tuo pagamento di 43,20 € speso da Albert Heijn, semplicemente usando la tua Carta bunq!"',
+    '"2026-08-01";"2026-08-01";"-2950,00";"NL00BUNQ0000000000";"NL00INGB0000000001";"Mario Rossi";"Affitto agosto"',
+    '"2026-08-02";"2026-08-02";"-125,00";"NL00BUNQ0000000000";"";"Albert Heijn 1001";"Albert Heijn 1001 ENSCHEDE, NL"',
+    '"2026-08-02";"2026-08-02";"1,25";"NL00BUNQ0000000000";"NL00BUNQ0000000002";"bunq";"Congratulazioni, hai vinto l’1% del tuo pagamento di 125,00 € speso da Albert Heijn, semplicemente usando la tua Carta bunq!"',
     '"2026-08-03";"2026-08-03";"-12,40";"NL00BUNQ0000000000";"";"Cafe De Hoek";"Cafe De Hoek ENSCHEDE, NL"',
-    '"2026-08-05";"2026-08-05";"-24,00";"NL00BUNQ0000000000";"";"Pizzeria Napoli";"Pizzeria Napoli ENSCHEDE, NL"',
-    '"2026-08-06";"2026-08-06";"12,00";"NL00BUNQ0000000000";"NL00ABNA0000000003";"Giulia Bianchi";"Pizza"',
-    '"2026-08-08";"2026-08-08";"-18,75";"NL00BUNQ0000000000";"";"Jumbo Centrum";"Jumbo Centrum ENSCHEDE, NL"',
-    '"2026-08-10";"2026-08-10";"-89,99";"NL00BUNQ0000000000";"";"RYANAIR";"RYANAIR DUBLIN, IE"',
-    '"2026-08-12";"2026-08-12";"-7,80";"NL00BUNQ0000000000";"";"NS GROEP IZ NS REIZIGERS";"NS GROEP IZ NS REIZIGERS UTRECHT, NL"',
+    '"2026-08-05";"2026-08-05";"-97,50";"NL00BUNQ0000000000";"";"Pizzeria Napoli";"Pizzeria Napoli ENSCHEDE, NL"',
+    '"2026-08-06";"2026-08-06";"48,75";"NL00BUNQ0000000000";"NL00ABNA0000000003";"Giulia Bianchi";"Pizza"',
+    '"2026-08-08";"2026-08-08";"-86,75";"NL00BUNQ0000000000";"";"Jumbo Centrum";"Jumbo Centrum ENSCHEDE, NL"',
+    '"2026-08-10";"2026-08-10";"-389,99";"NL00BUNQ0000000000";"";"RYANAIR";"RYANAIR DUBLIN, IE"',
+    '"2026-08-11";"2026-08-11";"-1240,00";"NL00BUNQ0000000000";"";"Booking.com";"Booking.com AMSTERDAM, NL"',
+    '"2026-08-12";"2026-08-12";"-27,80";"NL00BUNQ0000000000";"";"NS GROEP IZ NS REIZIGERS";"NS GROEP IZ NS REIZIGERS UTRECHT, NL"',
+    '"2026-08-13";"2026-08-13";"-92,40";"NL00BUNQ0000000000";"";"Shell Station";"Shell Station ENSCHEDE, NL"',
     '"2026-08-14";"2026-08-14";"-11,99";"NL00BUNQ0000000000";"";"Spotify";"Spotify STOCKHOLM, SE"',
-    '"2026-08-15";"2026-08-15";"-23,49";"NL00BUNQ0000000000";"NL00CITI0000000004";"Amazon EU SARL";"D01-0000000-0000000"',
-    '"2026-08-18";"2026-08-18";"-31,60";"NL00BUNQ0000000000";"";"Jumbo Centrum";"Jumbo Centrum ENSCHEDE, NL"',
-    '"2026-08-20";"2026-08-20";"-38,50";"NL00BUNQ0000000000";"";"Ristorante Il Faro";"Ristorante Il Faro ENSCHEDE, NL"',
+    '"2026-08-15";"2026-08-15";"-1499,00";"NL00BUNQ0000000000";"NL00CITI0000000004";"Amazon EU SARL";"D01-0000000-0000000"',
+    '"2026-08-16";"2026-08-16";"-34,99";"NL00BUNQ0000000000";"";"Basic-Fit";"Basic-Fit ENSCHEDE, NL"',
+    '"2026-08-17";"2026-08-17";"-28,50";"NL00BUNQ0000000000";"";"Pathe Enschede";"Pathe Enschede ENSCHEDE, NL"',
+    '"2026-08-18";"2026-08-18";"-112,60";"NL00BUNQ0000000000";"";"Jumbo Centrum";"Jumbo Centrum ENSCHEDE, NL"',
+    '"2026-08-19";"2026-08-19";"-38,20";"NL00BUNQ0000000000";"";"Apotheek Centrum";"Apotheek Centrum ENSCHEDE, NL"',
+    '"2026-08-20";"2026-08-20";"-138,50";"NL00BUNQ0000000000";"";"Ristorante Il Faro";"Ristorante Il Faro ENSCHEDE, NL"',
+    '"2026-08-21";"2026-08-21";"-759,00";"NL00BUNQ0000000000";"";"IKEA";"IKEA HENGELO, NL"',
     '"2026-08-22";"2026-08-22";"-45,00";"NL00BUNQ0000000000";"NL00INGB0000000005";"Vitens NV";"Acconto acqua"',
-    '"2026-08-24";"2026-08-24";"-9,50";"NL00BUNQ0000000000";"";"Negozio Sconosciuto";"Negozio Sconosciuto ENSCHEDE, NL"',
-    '"2026-08-25";"2026-08-25";"2150,00";"NL00BUNQ0000000000";"NL00RABO0000000006";"Azienda Esempio BV";"Stipendio agosto"'
+    '"2026-08-23";"2026-08-23";"-64,90";"NL00BUNQ0000000000";"";"Cadeau Boutique";"Cadeau Boutique ENSCHEDE, NL"',
+    '"2026-08-24";"2026-08-24";"-45,48";"NL00BUNQ0000000000";"";"Negozio Sconosciuto";"Negozio Sconosciuto ENSCHEDE, NL"',
+    '"2026-08-25";"2026-08-25";"10250,00";"NL00BUNQ0000000000";"NL00RABO0000000006";"Azienda Esempio BV";"Stipendio agosto"'
   ].join('\n');
 
   return { CATS, INCOME, isIncome, migrate, groupTx, parseCSV, parseAmount, parseDate, rowsToTx, merge, ownIbans, categorize, lookupItems, summarize, coverage, compare, deltaOf, categoryChanges, topMerchants, biggestExpense, daysCovered, monthsOf, daysIn, prevMonth, displayName, subline, kindLabel, accountLabel, maskIban, isCashback, normText, EXAMPLE_CSV };
@@ -2003,7 +2010,33 @@ window.DSCore = (function () {
 
   const aiErr = (text, fatal) => Object.assign(new Error(text), { fatal: !!fatal });
   const cancelledError = () => Object.assign(aiErr('Ricerca interrotta.', true), { cancelled: true });
+  /* Errori di passaggio: servizio sovraccarico (5xx) o troppe richieste al minuto (429 con un'attesa
+     breve). Si riprova da soli fino a due volte; i limiti giornalieri e gli altri errori fermano subito. */
+  const RETRY_WAITS = [4000, 12000], RETRY_MAX_WAIT = 60000;
   async function postJSON(url, headers, body, run) {
+    for (let attempt = 0; ; attempt++) {
+      try { return await postOnce(url, headers, body, run); }
+      catch (e) {
+        if (!e.retry || attempt >= RETRY_WAITS.length) throw e;
+        await pause(e.retry === true ? RETRY_WAITS[attempt] : e.retry, e.service, run);
+      }
+    }
+  }
+
+  /* Attesa prima di riprovare, interrotta da «Interrompi ricerca»; il motivo resta in vista accanto all'avanzamento. */
+  function pause(ms, service, run) {
+    if (run.cancelled) return Promise.reject(cancelledError());
+    ui.online.note = service + ' è occupato: riprovo tra ' + Math.round(ms / 1000) + ' s';
+    render();
+    return new Promise((resolve, reject) => {
+      const done = () => { clearTimeout(timer); run.controller.signal.removeEventListener('abort', stop); ui.online.note = ''; };
+      const stop = () => { done(); reject(cancelledError()); };
+      const timer = setTimeout(() => { done(); render(); resolve(); }, ms);
+      run.controller.signal.addEventListener('abort', stop, { once: true });
+    });
+  }
+
+  async function postOnce(url, headers, body, run) {
     if (run.cancelled) throw cancelledError();
     const service = url === SEARCH_URL ? 'Tavily' : provider().name;
     const ctl = new AbortController();
@@ -2030,17 +2063,34 @@ window.DSCore = (function () {
     // Gemini segnala una chiave sbagliata con 400 e il testo dell'errore, gli altri servizi con 401.
     const detail = errorText(data);
     if (res.status === 401 || res.status === 403 || /api.?key/i.test(detail)) throw aiErr('Controlla la chiave ' + service + ' e i suoi permessi in «Ricerca online».', true);
-    if ([402, 429, 432, 433].includes(res.status)) throw aiErr('Limite del piano Free di ' + service + ' raggiunto. Riprova quando la quota si rinnova; le categorie già trovate restano salvate.', true);
-    if (res.status >= 500) throw aiErr(service + ' non è disponibile in questo momento. Riprova più tardi.', true);
+    const quota = 'Limite del piano Free di ' + service + ' raggiunto. Riprova quando la quota si rinnova; le categorie già trovate restano salvate.';
+    if (res.status === 429) {
+      const wait = retryDelay(res, data);
+      if (wait > 0 && wait <= RETRY_MAX_WAIT) throw Object.assign(aiErr(quota, true), { retry: wait, service });
+    }
+    if ([402, 429, 432, 433].includes(res.status)) throw aiErr(quota, true);
+    if (res.status >= 500) throw Object.assign(aiErr(service + ' non è disponibile in questo momento' + (detail ? ' (' + detail + ')' : '') + '. Riprova più tardi.', true), { retry: true, service });
     // Il testo del servizio dice cosa non va, per esempio un parametro che non accetta.
     throw aiErr('La ricerca con ' + service + ' non è riuscita' + (detail ? ': ' + detail : '.'), true);
   }
 
   /* Il messaggio d'errore di un servizio: Gemini lo manda dentro un elenco, Tavily dentro «detail». */
-  function errorText(data) {
+  function errorText(data, max = 160) {
     const e = Array.isArray(data) ? data[0] : data;
     const m = e && ((e.error && (e.error.message || e.error)) || (e.detail && (e.detail.error || e.detail)) || e.message);
-    return typeof m === 'string' ? m.slice(0, 160) : '';
+    return typeof m === 'string' ? m.slice(0, max) : '';
+  }
+
+  /* L'attesa che il servizio chiede prima di riprovare, in millisecondi (0 se non la dice): intestazione
+     Retry-After, il RetryInfo di Gemini o un testo come «try again in 7.5s». */
+  function retryDelay(res, data) {
+    const header = Number(res.headers.get('retry-after'));
+    if (header > 0) return header * 1000;
+    const e = Array.isArray(data) ? data[0] : data;
+    const info = ((e && e.error && e.error.details) || []).find(d => d && typeof d.retryDelay === 'string');
+    if (info) return (parseFloat(info.retryDelay) || 0) * 1000;
+    const m = errorText(data, 2000).match(/(?:retry|try again) in ([\d.]+)(ms|s)\b/i);
+    return m ? parseFloat(m[1]) * (m[2].toLowerCase() === 'ms' ? 1 : 1000) : 0;
   }
 
   function parseAiResults(data) {
@@ -2160,7 +2210,7 @@ window.DSCore = (function () {
     if (groups.length && groups.length <= AI_AUTO_MAX) runLookup(new Set(groups.map(g => g.key)));
   }
 
-  const progress = () => 'Ricerca gratuita: ' + ui.online.done + ' di ' + ui.online.total + ' esercenti';
+  const progress = () => 'Ricerca gratuita: ' + ui.online.done + ' di ' + ui.online.total + ' esercenti' + (ui.online.note ? ' · ' + ui.online.note : '');
   function onlineHint() {
     if (isDemo()) return null;
     if (ui.online.busy) return h('p', { class: 'attn-act', role: 'status' }, h('span', { class: 'spin', 'aria-hidden': 'true' }), progress());
@@ -2193,7 +2243,8 @@ window.DSCore = (function () {
       body = [
         h('p', {}, 'Tavily cerca gli esercenti sconosciuti e il modello scelto assegna la categoria. Piani gratuiti, senza carta di credito.'),
         h('ul', { class: 'providers' }, ...PROVIDERS.map(p => h('li', {},
-          h('a', { href: p.keysUrl, target: '_blank', rel: 'noopener' }, 'Chiave ' + p.name), ' — ' + p.quota))),
+          h('a', { href: p.keysUrl, target: '_blank', rel: 'noopener' }, 'Chiave ' + p.name), ' — ' + p.quota)),
+          h('li', {}, h('a', { href: 'https://app.tavily.com/home', target: '_blank', rel: 'noopener' }, 'Chiave Tavily'), ' — serve con qualsiasi modello: 1.000 ricerche gratis al mese')),
         h('form', { class: 'online-keys', onsubmit: e => { e.preventDefault(); saveKey(picker.value, input.value, search.value); } },
           h('label', {}, 'Modello che classifica', picker),
           h('label', {}, 'Chiave API del modello scelto', input),

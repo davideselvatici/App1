@@ -412,6 +412,89 @@ describe('service errors', () => {
     expect(a.nodes.get('#toast').textContent).toContain('Controlla la chiave Google Gemini');
   });
 
+  const overloaded = () => jsonResponse([{ error: { code: 503, message: 'The model is overloaded. Please try again later.', status: 'UNAVAILABLE' } }], 503);
+  const fire = async (instance, ms) => {
+    await until(() => [...instance.timers.values()].some(timer => timer.ms === ms));
+    [...instance.timers.values()].find(timer => timer.ms === ms).callback();
+  };
+
+  test('an overloaded model is retried after a short wait, with the reason in the progress', async () => {
+    let classifyCount = 0;
+    const a = app({ fetch: url => {
+      if (String(url).includes('tavily')) return jsonResponse(webResults);
+      return ++classifyCount === 1 ? overloaded() : jsonResponse(classificationResponse([result()]));
+    } });
+    const store = storeWith(a);
+    enableOnline(a);
+    const lookup = a.runLookup();
+    await until(() => [...a.timers.values()].some(timer => timer.ms === 4000));
+    expect(a.getUI().online.note).toBe('Google Gemini è occupato: riprovo tra 4 s');
+    await fire(a, 4000);
+    await lookup;
+    expect(classifyCount).toBe(2);
+    expect(store.ai[store.tx[0].key].c).toBe('sport');
+  });
+
+  test('a model that stays overloaded stops after two retries with its own message', async () => {
+    const a = app({ fetch: url => String(url).includes('tavily') ? jsonResponse(webResults) : overloaded() });
+    const store = storeWith(a);
+    enableOnline(a);
+    const lookup = a.runLookup();
+    await fire(a, 4000);
+    await fire(a, 12000);
+    await lookup;
+    expect(a.requests.filter(request => request.url.includes('googleapis'))).toHaveLength(3);
+    expect(a.nodes.get('#toast').textContent).toContain('Google Gemini non è disponibile in questo momento (The model is overloaded. Please try again later.)');
+    expect(store.ai).toEqual({});
+  });
+
+  test('a per-minute limit waits as long as Gemini asks, then continues', async () => {
+    let classifyCount = 0;
+    const a = app({ fetch: url => {
+      if (String(url).includes('tavily')) return jsonResponse(webResults);
+      return ++classifyCount === 1
+        ? jsonResponse([{ error: { code: 429, message: 'You exceeded your current quota.', status: 'RESOURCE_EXHAUSTED',
+          details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '41s' }] } }], 429)
+        : jsonResponse(classificationResponse([result()]));
+    } });
+    const store = storeWith(a);
+    enableOnline(a);
+    const lookup = a.runLookup();
+    await fire(a, 41000);
+    await lookup;
+    expect(store.ai[store.tx[0].key].c).toBe('sport');
+  });
+
+  test('a wait written only in the message, as Groq does, is also respected', async () => {
+    let classifyCount = 0;
+    const a = app({ fetch: url => {
+      if (String(url).includes('tavily')) return jsonResponse(webResults);
+      return ++classifyCount === 1
+        ? jsonResponse({ error: { message: 'Rate limit reached for model openai/gpt-oss-20b on tokens per minute. Please try again in 7.5s.' } }, 429)
+        : jsonResponse(classificationResponse([result()]));
+    } });
+    const store = storeWith(a);
+    a.setProvider('groq');
+    a.setApiKey('gsk_test-model-key-abcdefghij');
+    a.setSearchKey('tvly-test-secret');
+    const lookup = a.runLookup();
+    await fire(a, 7500);
+    await lookup;
+    expect(store.ai[store.tx[0].key].c).toBe('sport');
+  });
+
+  test('stopping the search during a wait sends nothing more', async () => {
+    const a = app({ fetch: url => String(url).includes('tavily') ? jsonResponse(webResults) : overloaded() });
+    storeWith(a);
+    enableOnline(a);
+    const lookup = a.runLookup();
+    await until(() => [...a.timers.values()].some(timer => timer.ms === 4000));
+    a.cancelLookup();
+    await lookup;
+    expect(a.requests.filter(request => request.url.includes('googleapis'))).toHaveLength(1);
+    expect(a.getUI().online.busy).toBe(false);
+  });
+
   test('other rejected requests show what the service says', async () => {
     const a = app({ fetch: url => String(url).includes('tavily')
       ? jsonResponse(webResults)
@@ -596,6 +679,17 @@ describe('online lookup eligibility', () => {
   });
 });
 describe('classification provider choice', () => {
+  test('the setup card links to the key of every model and to the Tavily key', () => {
+    const a = app();
+    const links = [];
+    const walk = node => {
+      if (node.tagName === 'A') links.push(node.attributes.href);
+      (node.children || []).forEach(walk);
+    };
+    walk(a.onlineCard());
+    expect(links).toEqual([...a.PROVIDERS.map(p => p.keysUrl), 'https://app.tavily.com/home']);
+  });
+
   test('clearing all data removes the keys of every model and the model choice', () => {
     const a = app();
     a.setProvider('gemini');
