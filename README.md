@@ -3,6 +3,13 @@
 Ledger groups bank-statement expenses in an installable, offline app. See
 [LEGGIMI.txt](LEGGIMI.txt) for installation, backups, and updates.
 
+## Language
+
+The app opens in Italian. Tap **Impostazioni** (Settings) in the navigation to
+switch between Italian and English; the choice is saved on the device and kept
+when you delete all data. Interface texts live in the `<script id="i18n">` block
+of `index.html`: add every new text in both languages.
+
 ## Free online classification
 
 Unknown merchants can be looked up with Tavily Basic Search and classified by a

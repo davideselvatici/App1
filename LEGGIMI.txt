@@ -49,7 +49,14 @@ quindi il codice può essere pubblico senza problemi.
    aggiorna da sola la volta dopo che la apri con la connessione attiva.
 
 
-5. RICERCA ONLINE (facoltativa)
+5. LINGUA
+
+   L'app si apre in italiano. Tocca "Impostazioni" nella barra di navigazione
+   per passare all'inglese (o tornare all'italiano). La scelta resta salvata
+   sul telefono, anche dopo "Cancella tutti i dati".
+
+
+6. RICERCA ONLINE (facoltativa)
 
    L'app riconosce da sola supermercati, bar, treni, bollette e simili.
    Per gli esercenti che non conosce, Tavily cerca informazioni online e un
