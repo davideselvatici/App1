@@ -117,7 +117,8 @@ function app({ persisted = {}, fetch: fetchMock } = {}) {
     'emptyStore', 'ctxOf', 'allCats', 'apiKey', 'setApiKey', 'searchKey', 'setSearchKey',
     'onlineReady', 'aiItem', 'searchQuery', 'aiPost', 'aiBatch', 'applyAi', 'parseAiResults',
     'postJSON', 'runLookup', 'autoLookup', 'cancelLookup', 'importBackup', 'exportBackup',
-    'clearAll', 'removeKey', 'render', 'onlineCard', 'save'
+    'clearAll', 'removeKey', 'render', 'onlineCard', 'save',
+    'provider', 'setProvider', 'providerById', 'saveKey', 'PROVIDERS'
   ];
   const expose = `\nwindow.__test = {
     ${exports.map(name => `${name}: typeof ${name} === 'undefined' ? undefined : ${name}`).join(',\n    ')},
@@ -203,7 +204,7 @@ describe('existing classification and backup compatibility', () => {
 });
 
 function enableOnline(instance) {
-  instance.setApiKey('gsk_test-secret');
+  instance.setApiKey('AIza-test-model-key');
   instance.setSearchKey('tvly-test-secret');
 }
 
@@ -253,7 +254,7 @@ describe('provider request boundaries and privacy', () => {
     expect(a.requests).toHaveLength(0);
   });
 
-  test('searches a merchant once, sends snippets to Groq, and persists cited categories', async () => {
+  test('searches a merchant once, sends snippets to the model, and persists cited categories', async () => {
     const a = app({ fetch: url => String(url).includes('tavily')
       ? jsonResponse({ results: [
         ...webResults.results,
@@ -274,10 +275,10 @@ describe('provider request boundaries and privacy', () => {
     });
     expect(search.body).not.toContain('12.5');
     expect(search.body).not.toContain('NL00BUNQ');
-    expect(classify.url).toBe('https://api.groq.com/openai/v1/chat/completions');
-    expect(classify.headers.authorization).toBe('Bearer gsk_test-secret');
+    expect(classify.url).toBe('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');
+    expect(classify.headers.authorization).toBe('Bearer AIza-test-model-key');
     const body = JSON.parse(classify.body);
-    expect(body.model).toBe('openai/gpt-oss-20b');
+    expect(body.model).toBe('gemini-flash-latest');
     expect(body.response_format.json_schema.strict).toBe(true);
     const items = JSON.parse(body.messages[1].content).movimenti;
     expect(items).toHaveLength(1);
@@ -291,7 +292,7 @@ describe('provider request boundaries and privacy', () => {
     expect(JSON.parse(a.storage.get(KEY)).ai[store.tx[0].key].c).toBe('sport');
   });
 
-  test('never searches personal transfers and strips financial identifiers from Groq input', async () => {
+  test('never searches personal transfers and strips financial identifiers from the model input', async () => {
     const a = app({ fetch: () => jsonResponse(classificationResponse([result({ categoria: 'rimborsi', fonti: [] })])) });
     const store = storeWith(a, [transaction({
       kind: 'transfer', raw: 'Giulia Bianchi', cp: 'NL00INGB0000000001',
@@ -300,7 +301,7 @@ describe('provider request boundaries and privacy', () => {
     enableOnline(a);
     await a.runLookup();
     expect(a.requests).toHaveLength(1);
-    expect(a.requests[0].url).toContain('groq.com');
+    expect(a.requests[0].url).toContain('generativelanguage.googleapis.com');
     const item = JSON.parse(JSON.parse(a.requests[0].body).messages[1].content).movimenti[0];
     expect(JSON.stringify(item)).not.toContain('NL00');
     expect(JSON.stringify(item)).not.toContain('contact@example.com');
@@ -410,7 +411,7 @@ describe('quotas, cancellation, and concurrent imports', () => {
     await a.runLookup();
     expect(a.requests).toHaveLength(2);
     expect(store.ai).toEqual({});
-    expect(a.nodes.get('#toast').textContent).toContain('Limite del piano Free di Groq');
+    expect(a.nodes.get('#toast').textContent).toContain('Limite del piano Free di Google Gemini');
     expect(a.getUI().online.busy).toBe(false);
     await a.runLookup();
     expect(a.requests).toHaveLength(3);
@@ -473,7 +474,7 @@ describe('quotas, cancellation, and concurrent imports', () => {
     expect(a.requests).toHaveLength(1);
     expect(a.apiKey()).toBe('');
     expect(a.searchKey()).toBe('');
-    expect(a.storage.has(KEY + ':groq-key')).toBe(false);
+    expect(a.storage.has(KEY + ':ai-key:gemini')).toBe(false);
     expect(a.storage.has(KEY + ':tavily-key')).toBe(false);
     expect(a.getUI().online.busy).toBe(false);
   });
@@ -565,5 +566,82 @@ describe('online lookup eligibility', () => {
     if (a.setSearchKey) a.setSearchKey('tvly-test-secret');
     await a.runLookup();
     expect(a.requests).toHaveLength(0);
+  });
+});
+describe('classification provider choice', () => {
+  test('a key saved by an older version keeps working and moves to the new slot', () => {
+    const a = app({ persisted: { [KEY + ':groq-key']: 'gsk_legacy-key-abcdefghij' } });
+    storeWith(a);
+    expect(a.provider().id).toBe('groq');
+    expect(a.apiKey()).toBe('gsk_legacy-key-abcdefghij');
+    expect(a.storage.has(KEY + ':groq-key')).toBe(false);
+    expect(a.storage.get(KEY + ':ai-key:groq')).toBe('gsk_legacy-key-abcdefghij');
+  });
+
+  test('starts on Google Gemini and keeps one key per model', () => {
+    const a = app();
+    expect(a.provider().id).toBe('gemini');
+    expect(a.PROVIDERS.map(p => p.id)).toEqual(['gemini', 'groq', 'cerebras']);
+    a.setApiKey('AIza-gemini-key-abcdefghij');
+    expect(a.apiKey()).toBe('AIza-gemini-key-abcdefghij');
+    a.setProvider('groq');
+    expect(a.apiKey()).toBe('');
+    a.setApiKey('gsk_groq-key-abcdefghij');
+    expect(a.apiKey()).toBe('gsk_groq-key-abcdefghij');
+    a.setProvider('gemini');
+    expect(a.apiKey()).toBe('AIza-gemini-key-abcdefghij');
+  });
+
+  test('an unknown stored model falls back to the default', () => {
+    const a = app({ persisted: { [KEY + ':ai-provider']: 'gone-away' } });
+    expect(a.provider().id).toBe('gemini');
+    expect(a.providerById('gone-away')).toBeUndefined();
+  });
+
+  test('sends the next request to the chosen model', async () => {
+    const a = app({ fetch: url => String(url).includes('tavily')
+      ? jsonResponse(webResults)
+      : jsonResponse(classificationResponse([result()])) });
+    const store = storeWith(a);
+    a.setProvider('cerebras');
+    a.setApiKey('csk-cerebras-key-abcdefghij');
+    a.setSearchKey('tvly-test-secret');
+    await a.runLookup();
+    const classify = a.requests.find(request => !request.url.includes('tavily'));
+    expect(classify.url).toBe('https://api.cerebras.ai/v1/chat/completions');
+    expect(JSON.parse(classify.body).model).toBe('gpt-oss-120b');
+    expect(store.ai[store.tx[0].key].c).toBe('sport');
+  });
+
+  test('a rejected key names the model that needs fixing', () => {
+    const a = app();
+    a.saveKey('cerebras', 'short', 'tvly-abcdefghijklmnopqrst');
+    expect(a.nodes.get('#toast').textContent).toContain('Cerebras');
+    a.saveKey('cerebras', 'csk-abcdefghijklmnopqrst', 'nope');
+    expect(a.nodes.get('#toast').textContent).toContain('Tavily');
+    expect(a.onlineReady()).toBe(false);
+  });
+
+  test('saving a valid key switches to that model and enables the lookup', () => {
+    const a = app();
+    storeWith(a, []);
+    a.saveKey('groq', 'gsk_abcdefghijklmnopqrst', 'tvly-abcdefghijklmnopqrst');
+    expect(a.provider().id).toBe('groq');
+    expect(a.onlineReady()).toBe(true);
+    expect(a.storage.get(KEY + ':ai-provider')).toBe('groq');
+    expect(a.storage.get(KEY + ':ai-key:groq')).toBe('gsk_abcdefghijklmnopqrst');
+  });
+
+  test('removing keys clears every model slot', () => {
+    const a = app();
+    a.setApiKey('AIza-gemini-key-abcdefghij');
+    a.setProvider('groq');
+    a.setApiKey('gsk_groq-key-abcdefghij');
+    a.setSearchKey('tvly-test-secret');
+    a.removeKey();
+    expect(a.apiKey()).toBe('');
+    expect(a.searchKey()).toBe('');
+    for (const provider of a.PROVIDERS) expect(a.storage.has(KEY + ':ai-key:' + provider.id)).toBe(false);
+    expect(a.storage.has(KEY + ':tavily-key')).toBe(false);
   });
 });

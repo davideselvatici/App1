@@ -242,8 +242,10 @@ details[open] > summary .summary-chevron { transform: rotate(90deg); }
 .data p { margin: 0; }
 .online-keys { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; margin: 4px 0; }
 .online-keys label { display: flex; flex-direction: column; gap: 7px; width: 100%; color: var(--ink-2); font-size: 12px; font-weight: 500; }
-.online-keys input { width: 100%; min-height: 46px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 11px; background: var(--sunk); font-size: 16px; }
+.online-keys input, .online-keys select { width: 100%; min-height: 46px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 11px; background: var(--sunk); font-size: 16px; }
 input::placeholder { color: var(--muted); font-weight: 400; }
+.providers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.providers a { font-weight: 500; }
 .online-busy { display: flex; gap: 10px; align-items: center; color: var(--accent); font-weight: 500; }
 .spin { width: 16px; height: 16px; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1827,17 +1829,39 @@ window.DSCore = (function () {
     else if (!e.shiftKey && (document.activeElement === last || !focusable.includes(document.activeElement))) { e.preventDefault(); first.focus(); }
   });
 
-  /* ---------- ricerca online gratuita con Tavily e Groq ---------- */
+  /* ---------- ricerca online gratuita: Tavily cerca, il modello scelto classifica ---------- */
   /* Le chiavi personali dei piani Free restano sul dispositivo. Tavily cerca solo
-     nome e luogo degli esercenti pagati con carta; Groq classifica i movimenti
-     sconosciuti con i risultati della ricerca. Nessun servizio a pagamento di riserva. */
-  const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+     nome e luogo degli esercenti pagati con carta; il modello scelto classifica i
+     movimenti sconosciuti con i risultati della ricerca. Nessun servizio a pagamento
+     di riserva: si scelgono solo servizi con un piano gratuito. */
   const SEARCH_URL = 'https://api.tavily.com/search';
-  const AI_MODEL = 'openai/gpt-oss-20b';
-  const AI_BATCH = 5, AI_AUTO_MAX = 80;
-  const KEY_API = KEY + ':groq-key', KEY_SEARCH = KEY + ':tavily-key';
+  /* Questi modelli parlano tutti lo stesso dialetto di OpenAI, quindi cambiano solo
+     indirizzo, nome del modello e chiave. Il primo è il predefinito: ha la quota
+     gratuita più ampia, così la ricerca online copre molti più movimenti. */
+  const PROVIDERS = [
+    {
+      id: 'gemini', name: 'Google Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      model: 'gemini-flash-latest', keyPrefix: 'AIza', keysUrl: 'https://aistudio.google.com/apikey',
+      quota: 'token di testo gratis ogni giorno: la quota gratuita più ampia dei tre'
+    },
+    {
+      id: 'groq', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions',
+      model: 'openai/gpt-oss-20b', keyPrefix: 'gsk_', keysUrl: 'https://console.groq.com/keys',
+      quota: 'la quota gratuita più piccola: circa 200.000 token al giorno'
+    },
+    {
+      id: 'cerebras', name: 'Cerebras', url: 'https://api.cerebras.ai/v1/chat/completions',
+      model: 'gpt-oss-120b', keyPrefix: 'csk-', keysUrl: 'https://cloud.cerebras.ai',
+      quota: 'prova gratuita: circa un milione di token al giorno'
+    }
+  ];
+  /* Più movimenti per richiesta: il lungo elenco di categorie si manda una volta sola. */
+  const AI_BATCH = 8, AI_AUTO_MAX = 80;
+  const KEY_PROVIDER = KEY + ':ai-provider', KEY_SEARCH = KEY + ':tavily-key';
+  const LEGACY_GROQ_KEY = KEY + ':groq-key';
+  const providerKeyName = id => KEY + ':ai-key:' + id;
   const FOOT_OFFLINE = footEl.textContent;
-  const FOOT_ONLINE = 'I dati restano su questo dispositivo. Solo i movimenti sconosciuti vanno a Tavily e Groq, senza IBAN.';
+  const FOOT_ONLINE = 'I dati restano su questo dispositivo. Solo i movimenti sconosciuti vanno a Tavily e al modello scelto, senza IBAN.';
 
   const secretMem = {};
   function readSecret(k) { try { return localStorage.getItem(k) || secretMem[k] || ''; } catch (e) { return secretMem[k] || ''; } }
@@ -1845,13 +1869,31 @@ window.DSCore = (function () {
     secretMem[k] = v;
     try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { /* resta solo in memoria */ }
   }
-  const apiKey = () => readSecret(KEY_API);
+  const providerById = id => PROVIDERS.find(p => p.id === id);
+  /* Chi aveva già una chiave Groq continua a usarla finché non sceglie un altro modello:
+     la chiave viene spostata nel posto nuovo, senza perdere il resto. */
+  function migrateLegacyKey() {
+    const legacy = readSecret(LEGACY_GROQ_KEY);
+    if (readSecret(KEY_PROVIDER) || !legacy) return;
+    writeSecret(providerKeyName('groq'), legacy);
+    writeSecret(LEGACY_GROQ_KEY, '');
+    writeSecret(KEY_PROVIDER, 'groq');
+  }
+  migrateLegacyKey();
+  const savedProviderId = readSecret(KEY_PROVIDER);
+  let activeProvider = providerById(savedProviderId) ? savedProviderId : PROVIDERS[0].id;
+  const provider = () => providerById(activeProvider) || PROVIDERS[0];
+  const setProvider = id => {
+    activeProvider = providerById(id) ? id : PROVIDERS[0].id;
+    writeSecret(KEY_PROVIDER, activeProvider);
+  };
+  const apiKey = () => readSecret(providerKeyName(provider().id));
   const searchKey = () => readSecret(KEY_SEARCH);
-  const setApiKey = v => writeSecret(KEY_API, v);
+  const setApiKey = v => writeSecret(providerKeyName(provider().id), v);
   const setSearchKey = v => writeSecret(KEY_SEARCH, v);
   const onlineReady = () => !!(apiKey() && searchKey());
   let lookupRun = null, lookupQueued = false;
-  const searchCache = new Map(); // riusa le ricerche anche se Groq raggiunge un limite
+  const searchCache = new Map(); // riusa le ricerche anche se il modello raggiunge un limite
 
   function cancelLookup() {
     if (lookupRun) { lookupRun.cancelled = true; lookupRun.controller.abort(); }
@@ -1961,7 +2003,7 @@ window.DSCore = (function () {
   const cancelledError = () => Object.assign(aiErr('Ricerca interrotta.', true), { cancelled: true });
   async function postJSON(url, headers, body, run) {
     if (run.cancelled) throw cancelledError();
-    const service = url === SEARCH_URL ? 'Tavily' : 'Groq';
+    const service = url === SEARCH_URL ? 'Tavily' : provider().name;
     const ctl = new AbortController();
     const abort = () => ctl.abort();
     run.controller.signal.addEventListener('abort', abort, { once: true });
@@ -1991,20 +2033,22 @@ window.DSCore = (function () {
 
   function parseAiResults(data) {
     const choice = data && data.choices && data.choices[0];
-    if (!choice || choice.finish_reason !== 'stop' || !choice.message || choice.message.refusal) throw aiErr('Groq non ha completato la classificazione. Riprova con meno movimenti.', true);
+    const name = provider().name;
+    if (!choice || choice.finish_reason !== 'stop' || !choice.message || choice.message.refusal) throw aiErr(name + ' non ha completato la classificazione. Riprova con meno movimenti.', true);
     let parsed;
-    try { parsed = JSON.parse(choice.message.content); } catch (e) { throw aiErr('Groq ha dato una risposta illeggibile.', true); }
-    if (!parsed || !Array.isArray(parsed.risultati)) throw aiErr('Groq ha dato una risposta incompleta.', true);
+    try { parsed = JSON.parse(choice.message.content); } catch (e) { throw aiErr(name + ' ha dato una risposta illeggibile.', true); }
+    if (!parsed || !Array.isArray(parsed.risultati)) throw aiErr(name + ' ha dato una risposta incompleta.', true);
     return parsed.risultati;
   }
 
   async function aiPost(key, s, items, run) {
+    const target = provider();
     const body = {
-      model: AI_MODEL, max_completion_tokens: 2048, reasoning_effort: 'low', temperature: 0.2,
+      model: target.model, max_completion_tokens: 2048, reasoning_effort: 'low', temperature: 0.2,
       messages: [{ role: 'system', content: aiSystem(s) }, { role: 'user', content: JSON.stringify({ movimenti: items }) }],
       response_format: aiSchema(s)
     };
-    return parseAiResults(await postJSON(API_URL, { authorization: 'Bearer ' + key }, body, run));
+    return parseAiResults(await postJSON(target.url, { authorization: 'Bearer ' + key }, body, run));
   }
 
   async function aiBatch(keys, s, batch, run) {
@@ -2113,18 +2157,36 @@ window.DSCore = (function () {
       : null;
   }
 
+  /* Un solo selettore per il modello: con «reload» cambiarlo passa al modello scelto. */
+  function providerPicker(reload) {
+    const picker = h('select', { id: 'provider', 'aria-label': 'Modello che classifica' });
+    for (const p of PROVIDERS) picker.append(h('option', { value: p.id }, p.name));
+    picker.value = provider().id;
+    if (reload) picker.addEventListener('change', () => {
+      setProvider(picker.value);
+      searchCache.clear();
+      render();
+      say('Modello per la classificazione: ' + provider().name + '.');
+    });
+    return picker;
+  }
+
   function onlineCard() {
     let body;
     if (!onlineReady()) {
-      const input = h('input', { type: 'password', id: 'apikey', placeholder: 'Chiave Groq (gsk_…)', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Chiave API di Groq' });
+      const picker = providerPicker(false);
+      const input = h('input', { type: 'password', id: 'apikey', placeholder: 'Incolla la chiave API', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Chiave API del modello scelto' });
       const search = h('input', { type: 'password', id: 'searchkey', placeholder: 'Chiave Tavily (tvly-…)', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Chiave API di Tavily' });
       body = [
-        h('p', {}, 'Tavily cerca gli esercenti sconosciuti e Groq sceglie la categoria. Piani Free, senza carta di credito.'),
-        h('p', { class: 'fine' }, 'Crea le chiavi su ', h('a', { href: 'https://console.groq.com/keys', target: '_blank', rel: 'noopener' }, 'Groq'), ' e ',
-          h('a', { href: 'https://app.tavily.com/home', target: '_blank', rel: 'noopener' }, 'Tavily'), ' e incollale qui.'),
-        h('form', { class: 'online-keys', onsubmit: e => { e.preventDefault(); saveKey(input.value, search.value); } },
-          h('label', {}, 'Chiave Groq', input), h('label', {}, 'Chiave Tavily', search), h('button', { class: 'btn btn-primary', type: 'submit' }, 'Attiva gratis')),
-        h('p', { class: 'fine' }, 'Tavily riceve nome e luogo degli esercenti pagati con carta; Groq nome, descrizione e importo, senza IBAN. Le chiavi restano sul dispositivo, fuori dal backup.')
+        h('p', {}, 'Tavily cerca gli esercenti sconosciuti e il modello scelto assegna la categoria. Piani gratuiti, senza carta di credito.'),
+        h('ul', { class: 'providers' }, ...PROVIDERS.map(p => h('li', {},
+          h('a', { href: p.keysUrl, target: '_blank', rel: 'noopener' }, 'Chiave ' + p.name), ' — ' + p.quota))),
+        h('form', { class: 'online-keys', onsubmit: e => { e.preventDefault(); saveKey(picker.value, input.value, search.value); } },
+          h('label', {}, 'Modello che classifica', picker),
+          h('label', {}, 'Chiave API del modello scelto', input),
+          h('label', {}, 'Chiave Tavily', search),
+          h('button', { class: 'btn btn-primary', type: 'submit' }, 'Attiva gratis')),
+        h('p', { class: 'fine' }, 'Tavily riceve nome e luogo degli esercenti pagati con carta; il modello scelto nome, descrizione e importo, senza IBAN. Le chiavi restano sul dispositivo, fuori dal backup.')
       ];
     } else {
       const known = Object.keys(store.ai || {}).length;
@@ -2134,6 +2196,7 @@ window.DSCore = (function () {
         ui.online.busy ? h('p', { class: 'online-busy', role: 'status' }, h('span', { class: 'spin', 'aria-hidden': 'true' }), progress()) : null,
         known ? h('p', { class: 'fine' }, plural(known, 'risultato salvato', 'risultati salvati') + '.') : null,
         pending > AI_AUTO_MAX ? h('p', { class: 'fine' }, pending + ' esercenti da cercare: tocca «Cerca ora».') : null,
+        h('div', { class: 'online-keys' }, h('label', {}, 'Modello che classifica', providerPicker(true))),
         h('div', { class: 'actions' },
           pending ? h('button', { class: 'linkish', type: 'button', onclick: runLookup }, 'Cerca ora') : null,
           ui.online.busy ? h('button', { class: 'linkish', type: 'button', onclick: () => { cancelLookup(); render(); say('Ricerca interrotta. Le categorie già trovate restano salvate.'); } }, 'Interrompi ricerca') : null,
@@ -2149,16 +2212,20 @@ window.DSCore = (function () {
       h('div', { class: 'data' }, body));
   }
 
-  function saveKey(v, search) {
+  function saveKey(id, v, search) {
+    const target = providerById(id) || PROVIDERS[0];
     v = String(v || '').trim(); search = String(search || '').trim();
-    if (!/^gsk_\S{20,}$/.test(v)) { say('La chiave Groq deve iniziare con «gsk_».', true); return; }
+    if (!/^\S{16,}$/.test(v)) { say('La chiave di ' + target.name + ' non sembra completa: incollala per intero.', true); return; }
     if (!/^tvly-\S{20,}$/.test(search)) { say('La chiave Tavily deve iniziare con «tvly-».', true); return; }
-    cancelLookup(); setApiKey(v); setSearchKey(search);
-    try { localStorage.removeItem(KEY + ':api-key'); } catch (e) { /* vecchia chiave Claude */ }
-    render(); say('Ricerca gratuita attiva.'); autoLookup();
+    cancelLookup(); setProvider(target.id); setApiKey(v); setSearchKey(search);
+    try { localStorage.removeItem(KEY + ':api-key'); } catch (e) { /* vecchia chiave di un servizio dismesso */ }
+    render(); say('Ricerca gratuita attiva con ' + target.name + '.'); autoLookup();
   }
   function removeKey() {
-    cancelLookup(); setApiKey(''); setSearchKey(''); searchCache.clear();
+    cancelLookup();
+    for (const p of PROVIDERS) writeSecret(providerKeyName(p.id), '');
+    writeSecret(LEGACY_GROQ_KEY, '');
+    setSearchKey(''); searchCache.clear();
     render(); say('Ricerca disattivata e chiavi rimosse da questo dispositivo.');
   }
   function goOnline() {
