@@ -280,6 +280,10 @@ describe('provider request boundaries and privacy', () => {
     const body = JSON.parse(classify.body);
     expect(body.model).toBe('gemini-flash-latest');
     expect(body.response_format.json_schema.strict).toBe(true);
+    expect(body.max_completion_tokens).toBe(8192);
+    const choices = body.response_format.json_schema.schema.properties.risultati.items.properties.categoria.enum;
+    expect(choices[0]).toBe('incerto');
+    expect(choices).not.toContain('');
     const items = JSON.parse(body.messages[1].content).movimenti;
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ nome: 'Mystery Merchant', importo: -12.5, volte: 2 });
@@ -335,7 +339,7 @@ describe('model result validation', () => {
     const batch = a.core.lookupItems(store.tx, a.ctxOf(store));
     batch[0].sources = webResults.results;
     const invalid = [
-      result({ categoria: '' }), result({ categoria: 'invented' }), result({ id: '01' }),
+      result({ categoria: '' }), result({ categoria: 'incerto' }), result({ categoria: 'invented' }), result({ id: '01' }),
       result({ id: 1 }), result({ id: '1.0' }), result({ id: '9' }),
       result({ fonti: [] }), result({ fonti: [99, '1', -1, 1.5] }),
       result({ cosa: null }), result({ fonti: null })
@@ -394,6 +398,29 @@ describe('model result validation', () => {
     expect(a.getStore().ai[tx.key].sources).toHaveLength(1);
     expect(a.getStore().ai).not.toHaveProperty('M:BAD');
     expect(a.onlineReady()).toBe(false);
+  });
+});
+
+describe('service errors', () => {
+  test('a wrong Gemini key, reported with status 400, asks to check that key', async () => {
+    const a = app({ fetch: url => String(url).includes('tavily')
+      ? jsonResponse(webResults)
+      : jsonResponse([{ error: { code: 400, message: 'Please pass a valid API key', status: 'INVALID_ARGUMENT' } }], 400) });
+    storeWith(a);
+    enableOnline(a);
+    await a.runLookup();
+    expect(a.nodes.get('#toast').textContent).toContain('Controlla la chiave Google Gemini');
+  });
+
+  test('other rejected requests show what the service says', async () => {
+    const a = app({ fetch: url => String(url).includes('tavily')
+      ? jsonResponse(webResults)
+      : jsonResponse({ error: { message: 'Invalid value at response_format' } }, 400) });
+    const store = storeWith(a);
+    enableOnline(a);
+    await a.runLookup();
+    expect(a.nodes.get('#toast').textContent).toContain('La ricerca con Google Gemini non è riuscita: Invalid value at response_format');
+    expect(store.ai).toEqual({});
   });
 });
 
@@ -569,6 +596,19 @@ describe('online lookup eligibility', () => {
   });
 });
 describe('classification provider choice', () => {
+  test('clearing all data removes the keys of every model and the model choice', () => {
+    const a = app();
+    a.setProvider('gemini');
+    a.setApiKey('AIza-gemini-key-abcdefghij');
+    a.setProvider('groq');
+    a.setApiKey('gsk_groq-key-abcdefghijklmnop');
+    a.setSearchKey('tvly-test-secret');
+    a.clearAll();
+    expect([...a.storage.keys()].filter(k => /key|provider/.test(k))).toEqual([]);
+    expect(a.provider().id).toBe('gemini');
+    expect(a.onlineReady()).toBe(false);
+  });
+
   test('a key saved by an older version keeps working and moves to the new slot', () => {
     const a = app({ persisted: { [KEY + ':groq-key']: 'gsk_legacy-key-abcdefghij' } });
     storeWith(a);
