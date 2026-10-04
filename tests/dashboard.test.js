@@ -35,14 +35,15 @@ const twoMonths = () => storeOf([JULY, '2026-07-01_2026-07-31.csv'], [C.EXAMPLE_
 const byName = (store, name) => store.tx.find(t => t.raw === name);
 
 describe('monthly balance: total in minus total out', () => {
-  test('sample month splits into income, net spending, and balance', () => {
+  test('sample month splits into income by category, spending, and balance', () => {
     const store = demo();
     const sum = C.summarize(store.tx, ctxOf(store), '2026-08');
-    expect(sum.total).toBe(99379);
-    expect(sum.inflow).toBe(215000);
+    expect(sum.total).toBe(100622);
+    expect(sum.inflow).toBe(216243);
     expect(sum.net).toBe(115621);
-    expect(sum.back).toBe(1243);
+    expect(sum.back).toBe(0);
     expect(sum.count).toBe(16);
+    expect(sum.incomeRows.map(g => [g.id, g.total])).toEqual([['stipendio', 215000], ['interessi', 43], ['rimborsi', 1200]]);
   });
 
   test('the balance equals the sum of every non-transfer movement', () => {
@@ -56,12 +57,13 @@ describe('monthly balance: total in minus total out', () => {
     const before = C.summarize(store.tx, ctxOf(store), '2026-08');
     const overrides = {
       [byName(store, 'Negozio Sconosciuto').id]: 'shopping',
-      [byName(store, 'Giulia Bianchi').id]: 'entrate'
+      [byName(store, 'Giulia Bianchi').id]: 'ristoranti'
     };
     const after = C.summarize(store.tx, ctxOf(store, { overrides }), '2026-08');
     expect(after.net).toBe(before.net);
-    expect(after.inflow).toBe(before.inflow + 1200);
-    expect(after.total).toBe(before.total + 1200);
+    expect(after.inflow).toBe(before.inflow - 1200);
+    expect(after.total).toBe(before.total - 1200);
+    expect(after.back).toBe(1200);
   });
 
   test('transfers between own accounts stay out of the balance', () => {
@@ -69,22 +71,36 @@ describe('monthly balance: total in minus total out', () => {
     const rent = byName(store, 'Mario Rossi');
     const sum = C.summarize(store.tx, ctxOf(store, { overrides: { [rent.id]: 'giroconto' } }), '2026-08');
     expect(sum.internalOut).toBe(65000);
-    expect(sum.total).toBe(99379 - 65000);
+    expect(sum.total).toBe(100622 - 65000);
     expect(sum.net).toBe(115621 + 65000);
   });
 
-  test('unclassified money received and refunds above a category spend count as income', () => {
+  test('refunds and unclassified money received count as income', () => {
     const store = storeOf([[HEADER,
       line('2026-09-02', '-10,00', 'Zalando', 'Zalando BERLIN, DE'),
       line('2026-09-05', '25,00', 'Zalando', 'Zalando refund'),
       line('2026-09-08', '40,00', 'Persona Sconosciuta', 'Grazie', 'NL00ABNA0000000003')
     ].join('\n'), 'sep.csv']);
     const sum = C.summarize(store.tx, ctxOf(store), '2026-09');
-    expect(sum.total).toBe(0);
+    expect(sum.total).toBe(1000);
     expect(sum.unIn).toBe(4000);
-    expect(sum.extraBack).toBe(1500);
-    expect(sum.inflow).toBe(5500);
+    expect(sum.incomeRows.map(g => [g.id, g.total])).toEqual([['rimborsi', 2500]]);
+    expect(sum.inflow).toBe(6500);
     expect(sum.net).toBe(5500);
+  });
+
+  test('money received is subtracted from a category only by a choice on that movement', () => {
+    const store = storeOf([[HEADER,
+      line('2026-09-02', '-10,00', 'Zalando', 'Zalando BERLIN, DE'),
+      line('2026-09-05', '25,00', 'Zalando', 'Zalando refund')
+    ].join('\n'), 'sep.csv']);
+    const refund = store.tx.find(t => t.cents > 0);
+    expect(C.summarize(store.tx, ctxOf(store, { rules: { [refund.key]: 'shopping' } }), '2026-09').incomeRows[0].id).toBe('rimborsi');
+    const sum = C.summarize(store.tx, ctxOf(store, { overrides: { [refund.id]: 'shopping' } }), '2026-09');
+    expect(sum.total).toBe(0);
+    expect(sum.extraBack).toBe(1500);
+    expect(sum.inflow).toBe(1500);
+    expect(sum.net).toBe(1500);
   });
 });
 
@@ -97,9 +113,9 @@ describe('month-over-month comparison', () => {
     expect(cmp.before.total).toBe(75000);
     const changes = C.categoryChanges(cmp);
     expect(changes[0]).toMatchObject({ id: 'viaggi', diff: 8999, before: 0 });
-    expect(changes.find(v => v.id === 'ristoranti').diff).toBe(6290 - 8000);
+    expect(changes.find(v => v.id === 'ristoranti').diff).toBe(7490 - 8000);
     expect(changes.some(v => v.id === 'affitto')).toBe(false);
-    expect(C.deltaOf(cmp).ratio).toBeCloseTo((99379 - 75000) / 75000);
+    expect(C.deltaOf(cmp).ratio).toBeCloseTo((100622 - 75000) / 75000);
   });
 
   test('a partial month is compared with the same days of the month before', () => {
@@ -131,7 +147,7 @@ describe('where the money goes', () => {
     expect(top[2].txs).toHaveLength(2);
   });
 
-  test('refunds from the same merchant are subtracted and unclassified spending is included', () => {
+  test('refunds stay in income and unclassified spending is included', () => {
     const store = storeOf([[HEADER,
       line('2026-09-02', '-50,00', 'Zalando', 'Zalando BERLIN, DE'),
       line('2026-09-09', '20,00', 'Zalando', 'Zalando BERLIN, DE'),
@@ -139,7 +155,10 @@ describe('where the money goes', () => {
       line('2026-09-11', '15,00', 'Giulia Bianchi', 'Pizza', 'NL00ABNA0000000003')
     ].join('\n'), 'sep.csv']);
     const top = C.topMerchants(C.summarize(store.tx, ctxOf(store), '2026-09'));
-    expect(top.map(m => [m.name, m.spent, m.cat])).toEqual([['Negozio Sconosciuto', 3500, ''], ['Zalando', 3000, 'shopping']]);
+    expect(top.map(m => [m.name, m.spent, m.cat])).toEqual([['Zalando', 5000, 'shopping'], ['Negozio Sconosciuto', 3500, '']]);
+    const refund = store.tx.find(t => t.raw === 'Zalando' && t.cents > 0);
+    const netted = C.topMerchants(C.summarize(store.tx, ctxOf(store, { overrides: { [refund.id]: 'shopping' } }), '2026-09'));
+    expect(netted.find(m => m.name === 'Zalando').spent).toBe(3000);
   });
 
   test('the biggest single expense ignores income and transfers', () => {

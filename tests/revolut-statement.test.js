@@ -113,11 +113,12 @@ describe('Revolut consolidated statement', () => {
     const store = { tx: [], files: [] };
     C.merge(store, parse());
     const sum = C.summarize(store.tx, { rules: {}, overrides: {}, own: C.ownIbans(store.tx), ai: {} }, '2026-09');
-    expect(Object.fromEntries(sum.rows.map(g => [g.id, g.spent]))).toEqual({ abbonamenti: 1598, shopping: 3990, ristoranti: 480 });
+    expect(Object.fromEntries(sum.rows.map(g => [g.id, g.spent]))).toEqual({ abbonamenti: 1598, shopping: 5990, ristoranti: 480 });
     expect(sum.unOut).toBe(90725);
-    expect(sum.total).toBe(96793);
-    expect(sum.inflow).toBe(254);
-    expect(sum.net).toBe(254 - 96793);
+    expect(sum.total).toBe(98793);
+    expect(sum.incomeRows.map(g => [g.id, g.total])).toEqual([['interessi', 254], ['rimborsi', 2000]]);
+    expect(sum.inflow).toBe(2254);
+    expect(sum.net).toBe(2254 - 98793);
     expect(sum.internalOut).toBe(65000);
   });
 

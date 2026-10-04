@@ -1,6 +1,6 @@
 {
-  "name": "Dove Spendo",
-  "short_name": "Dove Spendo",
+  "name": "Ledger",
+  "short_name": "Ledger",
   "description": "Le spese del mese per categoria, dall'estratto conto di bunq o Revolut.",
   "lang": "it",
   "id": "./",

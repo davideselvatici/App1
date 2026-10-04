@@ -1,6 +1,6 @@
 # App1
 
-Dove Spendo groups bank-statement expenses in an installable, offline app. See
+Ledger groups bank-statement expenses in an installable, offline app. See
 [LEGGIMI.txt](LEGGIMI.txt) for installation, backups, and updates.
 
 ## Free online classification

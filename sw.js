@@ -1,11 +1,11 @@
-/* Dove Spendo: tiene in memoria i file dell'app per aprirla anche senza connessione.
+/* Ledger: tiene in memoria i file dell'app per aprirla anche senza connessione.
    Cambia VERSION quando aggiorni font, icone o altri file. */
-const VERSION = 'dove-spendo-v7';
+const VERSION = 'ledger-v8';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './favicon-32.png',
   './bricolage-grotesque.woff2', './plex-sans-400.woff2', './plex-sans-500.woff2', './plex-sans-600.woff2',
-  './plex-mono-400.woff2', './plex-mono-500.woff2', './xlsx.full.min.js'
+  './plex-mono-400.woff2', './plex-mono-500.woff2', './unbounded-600.woff2', './xlsx.full.min.js'
 ];
 
 self.addEventListener('install', event => {

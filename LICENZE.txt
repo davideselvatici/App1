@@ -1,5 +1,5 @@
 Caratteri
-- Bricolage Grotesque, IBM Plex Sans, IBM Plex Mono: SIL Open Font License 1.1
+- Bricolage Grotesque, IBM Plex Sans, IBM Plex Mono, Unbounded: SIL Open Font License 1.1
   (file presi dai pacchetti Fontsource).
 
 Librerie

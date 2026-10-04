@@ -1,5 +1,5 @@
-DOVE SPENDO, app installabile
-=============================
+LEDGER, app installabile
+========================
 
 Cosa contiene questa cartella
 - index.html e sw.js: l'app e la parte che la fa funzionare anche offline
@@ -14,13 +14,13 @@ quindi il codice può essere pubblico senza problemi.
 1. METTERLA ONLINE (gratis, con GitHub Pages)
 
    a. Crea un account su github.com, se non ce l'hai.
-   b. Crea un nuovo repository pubblico, per esempio "dove-spendo".
+   b. Crea un nuovo repository pubblico, per esempio "ledger".
    c. Nel repository: Add file > Upload files. Carica TUTTI i file di questa
       cartella (i file, non la cartella). Poi "Commit changes".
    d. Settings > Pages. In "Build and deployment" scegli "Deploy from a branch",
       branch "main" e cartella "/ (root)". Salva.
    e. Dopo qualche minuto l'app è online all'indirizzo
-      https://TUO-NOME-UTENTE.github.io/dove-spendo/
+      https://TUO-NOME-UTENTE.github.io/ledger/
 
    Dal computer è più comodo, ma si può fare anche dal browser del telefono:
    prima estrai lo zip nell'app File e poi seleziona tutti i file.
